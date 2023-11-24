@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::node::Node;
+use crate::{node::Node, token::DataType};
 
 pub struct Generator {
     nodes: VecDeque<Node>
@@ -27,14 +27,38 @@ impl Generator {
         }
     }
 
-    fn codify(node: Node) -> Option<(String, usize)> {
-        if let Node::NumLiteral { literal } = node {
-            return Some((format!("{literal}"), 1));
+    fn codify(node: Node) -> Option<String> {
+        if let Node::NumLiteral { literal } = node.clone() {
+            return Some(format!("{literal}"));
         }
 
-        if let Node::Exit { expr } = node {
-            if let Some((code, nodes)) = Self::codify(*expr) {
-                return Some((format!("return {code};\n"), nodes + 1));
+        if let Node::Exit { expr } = node.clone() {
+            if let Some(code) = Self::codify(*expr) {
+                return Some(format!("exit({code});\n"));
+            }
+        }
+
+        if let Node::DataType { types } = node.clone() {
+            match types.get(0)? {
+                DataType::Int => return Some("int".to_string()),
+                DataType::Unit => return Some("void".to_string()),
+            }
+        }
+
+        if let Node::Define { name, func_type, body } = node.clone() {
+            if let Some(return_type) = Self::codify(Node::DataType { 
+                types: func_type.try_into().unwrap()
+            }) {
+                let mut function = format!("{return_type} {name}() {{\n");
+                for stmt in body {
+                    if let Some(code) = Self::codify(stmt) {
+                        function = format!("{function}{code}");
+                    } else {
+                        return None;
+                    }
+                }
+                function = format!("{}}}\n", function);
+                return Some(function);
             }
         }
 
@@ -42,17 +66,15 @@ impl Generator {
     }
 
     pub fn generate(&mut self) -> String {
-        let mut result = String::from("int main (void) {\n");
+        let mut result = String::from("#include <stdlib.h>\n");
         
         while let Some(node) = self.peek(0) {
-            let Some((code, nodes)) = Self::codify(node) else {
+            let Some(code) = Self::codify(node) else {
                 break;
             };
-            self.consume(nodes);
+            self.consume(1);
             result = format!("{result}{code}");
         }
-
-        result = format!("{result}}}");
 
         result
     }

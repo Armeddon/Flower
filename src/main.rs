@@ -6,7 +6,7 @@ mod generator;
 
 use std::{
     env,
-    fs,
+    fs, process::Command,
 };
 
 use generator::Generator;
@@ -30,4 +30,5 @@ fn main() {
     let code = generator.generate();
 
     fs::write("main.c", code).expect("Error writing to file!");
+    Command::new("gcc").arg("main.c").status().expect("Failed to compile C code!");
 }

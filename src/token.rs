@@ -1,6 +1,13 @@
 #[derive(Debug, Clone, Copy)]
 pub enum Keyword {
     Exit,
+    Define,
+}
+
+#[derive(Debug, Clone)]
+pub enum DataType {
+    Int,
+    Unit,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -21,12 +28,21 @@ impl std::fmt::Display for NumLiteral {
    } 
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Token {
     Keyword {
         keyword: Keyword,
     },
     Numliteral {
         literal: NumLiteral,
+    },
+    DataType {
+        data_type: DataType,
+    },
+    SpecialArrow,
+    TypeArrow,
+    EndArrow,
+    Identifier {
+        name: String,
     },
 }
