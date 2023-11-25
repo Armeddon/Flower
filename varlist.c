@@ -1,24 +1,28 @@
 #include <stdlib.h>
+#include "varlist.h"
 
-typedef struct {
+struct Variable {
     void *value;
     enum {
         Int,
         Unit,
     } type;
-} Variable;
+};
 
 struct VarList {
    Variable value;
    struct VarList *next;
 };
 
-void var_enqueue(struct VarList *end_list, Variable var) {
+void var_enqueue(struct VarList **begin_list, struct VarList **end_list, Variable var) {
     struct VarList *node = malloc(sizeof(struct VarList));
     node->value = var;
     node->next = NULL;
-    end_list->next = node;
-}
+    *end_list = node;
+    if (begin_list == NULL) {
+        *begin_list = node;
+    }
+ }
 
 struct VarList *var_dequeue(struct VarList *begin_list) {
     free(begin_list->value.value);
