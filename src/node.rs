@@ -2,6 +2,12 @@ use std::collections::VecDeque;
 
 use crate::token::{NumLiteral, DataType };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Pipe {
+    Normal,
+    Preserve,
+}
+
 #[derive(Debug, Clone)]
 pub enum Node {
     NumLiteral {
@@ -26,6 +32,7 @@ pub enum Node {
         func_type: Vec<DataType>,
         in_place_params: Vec<NumLiteral>,
         pipe: Option<Box<Node>>,
+        pipe_type: Option<Pipe>,
     },
 }
 

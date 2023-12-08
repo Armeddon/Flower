@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::{node::Node, token::{DataType, NumLiteral}};
+use crate::{node::{Node, Pipe}, token::{DataType, NumLiteral}};
 
 pub struct Generator {
     nodes: VecDeque<Node>
@@ -78,11 +78,12 @@ impl Generator {
             }
         }
 
-        if let Node::Funcall { func_name, func_type, in_place_params, pipe } = node.clone() {
+        if let Node::Funcall { func_name, func_type, in_place_params, pipe, pipe_type } = node.clone() {
             let mut func_name = func_name;
             let mut func_type = func_type;
             let mut in_place_params = in_place_params;
             let mut pipe = pipe;
+            let mut pipe_type = pipe_type;
             let mut funcall = "{\n".to_string();
             funcall = format!("{}VarList *_begin_list = NULL;\n", funcall);
             loop {
@@ -101,17 +102,20 @@ impl Generator {
                 }
                 funcall = format!("{}NULL}};\n", funcall);
                 funcall = format!("{}Variable *_res = {func_name}(_params, _begin_list);\n", funcall);
-                for _i in 0..(func_type.len() - 1 - in_place_params.len()) {
-                    funcall = format!("{}var_dequeue(&_begin_list);\n", funcall);
+                if pipe_type != Some(Pipe::Preserve) {
+                    for _i in 0..(func_type.len() - 1 - in_place_params.len()) {
+                        funcall = format!("{}var_dequeue(&_begin_list);\n", funcall);
+                    }
                 }
                 funcall = format!("{}if (_res != NULL) {{\nvar_enqueue(&_begin_list, _res);\n}}\n", funcall);
                 funcall = format!("{funcall}}}\n");
                 if let Some(node) = pipe.clone() {
-                    if let Node::Funcall { func_name: f_n, func_type: f_t, in_place_params: i_p_p, pipe: p } = *node {
+                    if let Node::Funcall { func_name: f_n, func_type: f_t, in_place_params: i_p_p, pipe: p, pipe_type: p_t } = *node {
                         func_name = f_n;
                         func_type = f_t;
                         in_place_params = i_p_p;
                         pipe = p;
+                        pipe_type = p_t;
                     }
                 } else {
                     break;

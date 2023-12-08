@@ -46,4 +46,5 @@ pub enum Token {
         name: String,
     },
     PipeArrow,
+    PreserveArrow,
 }

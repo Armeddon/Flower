@@ -1,7 +1,7 @@
 use std::collections::{VecDeque, HashMap};
 
 use crate::token::{ Token, Keyword, DataType };
-use crate::node::Node;
+use crate::node::{Node, Pipe};
 
 pub struct Parser {
     tokens: VecDeque<Token>,
@@ -127,7 +127,20 @@ impl Parser {
                                     types.clone() } else { return None; },
                                 in_place_params,
                                 pipe: Some(Box::from(stmt)),
+                                pipe_type: Some(Pipe::Normal),
                             }, cur - n + tokens + 1))
+                        }
+                    },
+                    Token::PreserveArrow => {
+                        if let Some((stmt, tokens)) = self.parse_stmt(cur + 1) {
+                            return Some((Node::Funcall {
+                                func_name: name.clone(),
+                                func_type: if let Some(types) = self.functions.get(&name) {
+                                    types.clone() } else { return None },
+                                in_place_params,
+                                pipe: Some(Box::from(stmt)),
+                                pipe_type: Some(Pipe::Preserve),
+                            }, cur - n + tokens + 1));
                         }
                     },
                     _ => {
@@ -137,6 +150,7 @@ impl Parser {
                                 types.clone() } else { return None; },
                             in_place_params,
                             pipe: None,
+                            pipe_type: None,
                         }, cur - n));
                     },
                 }
