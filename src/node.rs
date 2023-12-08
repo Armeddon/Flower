@@ -14,9 +14,18 @@ pub enum Node {
         types: VecDeque<DataType>,
     },
     Define {
-        name: String,
+        func_name: String,
         func_type: Vec<DataType>,
         body: Vec<Node>,
+    },
+    Return {
+        expr: Box<Node>,
+    },
+    Funcall {
+        func_name: String,
+        func_type: Vec<DataType>,
+        in_place_params: Vec<NumLiteral>,
+        pipe: Option<Box<Node>>,
     },
 }
 

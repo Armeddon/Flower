@@ -1,15 +1,36 @@
-use std::collections::VecDeque;
+use std::collections::{VecDeque, HashMap};
 
-use crate::token::{ Token, Keyword };
+use crate::token::{ Token, Keyword, DataType };
 use crate::node::Node;
 
 pub struct Parser {
     tokens: VecDeque<Token>,
+    functions: HashMap<String, Vec<DataType>>,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens: tokens.try_into().unwrap() }
+        Self { 
+            tokens: tokens.try_into().unwrap(),
+            functions: {
+                let mut map = HashMap::new();
+                map.insert("readInt".to_string(), Vec::from([DataType::Unit]));
+                map.insert("println".to_string(), Vec::from([
+                    DataType::Int,
+                    DataType::Unit,
+                ]));
+                map.insert("add".to_string(), Vec::from([
+                    DataType::Int,
+                    DataType::Int,
+                    DataType::Int,
+                ]));
+                map.insert("identity".to_string(), Vec::from([
+                    DataType::Int,
+                    DataType::Int,
+                ]));
+                map
+            },
+        }
     }
 
     fn peek(&self, n: usize) -> Option<Token> {
@@ -32,7 +53,7 @@ impl Parser {
         }
         if let Some(Token::DataType { data_type }) = self.peek(n) {
             if let Some(Token::TypeArrow) = self.peek(n + 1) {
-                if let Some((Node::DataType { mut types }, tokens)) = self.parse_expr(n) {
+                if let Some((Node::DataType { mut types }, tokens)) = self.parse_expr(n + 2) {
                     return Some((Node::DataType { 
                         types: {
                             types.push_front(data_type);
@@ -48,7 +69,7 @@ impl Parser {
         None
     }
 
-    fn parse_stmt(&self, n: usize) -> Option<(Node, usize)> {
+    fn parse_stmt(&mut self, n: usize) -> Option<(Node, usize)> {
         if let Some(Token::Keyword { keyword }) = self.peek(n) {
             match keyword {
                 Keyword::Exit => {
@@ -65,8 +86,9 @@ impl Parser {
                                     let mut cur = n + 3 + type_tokens + 1;
                                     loop {
                                         if let Some(Token::EndArrow) = self.peek(cur) {
-                                            return Some((Node::Define { 
-                                                name, 
+                                            self.functions.insert(name.clone(), types.clone().try_into().unwrap());
+                                            return Some((Node::Define {
+                                                func_name: name,
                                                 func_type: types.try_into().unwrap(),
                                                 body: stmts,
                                             }, cur - n + 1));
@@ -87,6 +109,44 @@ impl Parser {
                     }
                 }
             }
+        }
+        
+        if let Some(Token::Identifier { name }) = self.peek(n) {
+            let mut cur = n + 1;
+            let mut in_place_params = Vec::new();
+            while let Some(token) = self.peek(cur) {
+                match token {
+                    Token::Numliteral { literal } => {
+                        in_place_params.push(literal);
+                    },
+                    Token::PipeArrow => {
+                        if let Some((stmt, tokens)) = self.parse_stmt(cur + 1) {
+                            return Some((Node::Funcall {
+                                func_name: name.clone(),
+                                func_type: if let Some(types) = self.functions.get(&name) {
+                                    types.clone() } else { return None; },
+                                in_place_params,
+                                pipe: Some(Box::from(stmt)),
+                            }, cur - n + tokens + 1))
+                        }
+                    },
+                    _ => {
+                        return Some((Node::Funcall { 
+                            func_name: name.clone(),
+                            func_type: if let Some(types) = self.functions.get(&name) {
+                                types.clone() } else { return None; },
+                            in_place_params,
+                            pipe: None,
+                        }, cur - n));
+                    },
+                }
+                cur += 1;
+            }
+            
+        }
+
+        if let Some((expr, tokens)) = self.parse_expr(n) {
+            return Some((Node::Return { expr: Box::from(expr) }, tokens));
         }
 
         None

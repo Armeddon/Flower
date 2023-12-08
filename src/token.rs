@@ -4,7 +4,7 @@ pub enum Keyword {
     Define,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum DataType {
     Int,
     Unit,
@@ -45,4 +45,5 @@ pub enum Token {
     Identifier {
         name: String,
     },
+    PipeArrow,
 }
