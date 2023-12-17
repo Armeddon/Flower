@@ -54,7 +54,7 @@ impl Generator {
                 } else {
                     format!("{return_type} {func_name}(Variable **args, VarList *lst)\n {{")
                 };
-                for _i in 0..(func_type.len() - 1) {
+                for i in 0..(func_type.len() - 1) {
                     todo!();
                 }
                 for stmt in body {
