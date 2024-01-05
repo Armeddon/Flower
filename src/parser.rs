@@ -107,7 +107,8 @@ impl Parser {
                             }
                         }
                     }
-                }
+                },
+                _ => return None
             }
         }
         

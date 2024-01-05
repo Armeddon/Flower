@@ -1,10 +1,21 @@
 #include <stdlib.h>
+#include <string.h>
 #include "varlist.h"
 
 enum Type {
     Int,
     Unit,
 };
+
+size_t type_size(enum Type type) {
+    switch (type) {
+        case Int:
+            return sizeof(int);
+        case Unit:
+        default:
+            return 0;
+    }
+}
 
 struct Variable {
     void *value;
@@ -44,6 +55,7 @@ void var_dequeue(VarList **begin_list) {
 }
 
 Variable *var_get(VarList **begin_list, int n) {
+    if (!*begin_list) return NULL;
     if (n == 0) {
         return (*begin_list)->value;
     }
@@ -56,4 +68,13 @@ void var_delete(VarList *list) {
     VarList *next = list->next;
     free(list);
     var_delete(next);
+}
+
+Variable *var_cpy(Variable *var) {
+    if (!var) return NULL;
+    Variable *cpy = malloc(sizeof(Variable));
+    cpy->type = var->type;
+    cpy->value = malloc(type_size(cpy->type));
+    memcpy(cpy->value, var->value, type_size(cpy->type));
+    return cpy;
 }

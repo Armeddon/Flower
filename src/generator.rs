@@ -46,14 +46,15 @@ impl Generator {
         }
 
         if let Node::Define { func_name, func_type, body } = node.clone() {
-            if let Some(return_type) = Self::codify(Node::DataType { 
+            if let Some(_) = Self::codify(Node::DataType { 
                 types: VecDeque::from([*func_type.last()?])
             }) {
                 let mut function = if func_name == "main" {
-                    "int main() {\n".to_string()
+                    "int main(void) {\n".to_string()
                 } else {
-                    format!("{return_type} {func_name}(Variable **args, VarList *lst)\n {{")
+                    format!("Variable *{func_name}(Variable **args, VarList *lst) {{\n")
                 };
+                function = format!("{}Variable *_result;\n", function);
                 for i in 0..(func_type.len() - 1) {
                     todo!();
                 }
@@ -66,6 +67,8 @@ impl Generator {
                 }
                 if func_name == "main" {
                     function = format!("{}return 0;\n", function);
+                } else if func_type[0] != DataType::Unit {
+                    function = format!("{}return _result;\n", function);
                 }
                 function = format!("{}}}\n", function);
                 return Some(function);
@@ -121,6 +124,7 @@ impl Generator {
                     break;
                 }
             }
+            funcall = format!("{}_result = var_cpy(var_get(&_begin_list, 0));\n", funcall);
             funcall = format!("{}var_delete(_begin_list);\n", funcall);
             funcall = format!("{funcall}}}\n");
             return Some(funcall);

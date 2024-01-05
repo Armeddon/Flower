@@ -4,7 +4,7 @@ pub enum Keyword {
     Define,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DataType {
     Int,
     Unit,

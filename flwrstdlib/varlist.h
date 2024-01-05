@@ -13,3 +13,5 @@ extern void var_dequeue(VarList **begin_list);
 extern Variable *var_get(VarList **begin_list, int n);
 
 extern void var_delete(VarList *list);
+
+extern Variable *var_cpy(Variable *var);
