@@ -1,15 +1,16 @@
 Not yet finished!
 
+Most complex thing ready for now:
 
-``define readDouble :>
-Int :>
-    readInt =>
-    identity |>
-    add
-;>
+define readDouble :>  
+Int :>  
+    readInt =>  
+    identity |>  
+    add  
+;>  
 
-define main :>
-() :>
-    readDouble =>
-    println
-;>``
+define main :>  
+() :>  
+    readDouble =>  
+    println  
+;>  
