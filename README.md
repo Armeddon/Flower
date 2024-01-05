@@ -4,13 +4,13 @@ Most complex thing ready for now:
 
 define readDouble :>  
 Int :>  
-    readInt =>  
-    identity |>  
-    add  
+&emsp;readInt =>  
+&emsp;identity |>  
+&emsp;add  
 ;>  
 
 define main :>  
 () :>  
-    readDouble =>  
-    println  
+&emsp;readDouble =>  
+&emsp;println  
 ;>  
