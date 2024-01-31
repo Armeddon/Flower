@@ -42,7 +42,7 @@ fn main() {
     fs::write("main.c", code).expect("Error writing to file!");
 
     let status = process::Command::new("gcc")
-        .arg("-g")
+        .arg("-O3")
         .arg("flwrstdlib.c")
         .arg("main.c")
         .status();

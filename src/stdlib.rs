@@ -19,31 +19,10 @@ pub const STDLIB_C: &[u8] = r#"#include <stddef.h>
 #include "varlist.h"
 
 Variable *identity(Variable **args, VarList *lst) {
-    if (*args == NULL) {
-        Variable *var = malloc(sizeof(Variable));
-        var->type = lst->value->type;
-        switch (var->type) {
-            case Int:
-                var->value = malloc(sizeof(int));
-                *(int*)var->value = *(int*)lst->value->value;
-                break;
-            default:
-                break;
-        }
-        return var;
-    } else {
-        Variable *var = malloc(sizeof(Variable));
-        var->type = (*args)[0].type;
-        switch (var->type) {
-            case Int:
-                var->value = malloc(sizeof(int));
-                *(int*)var->value = *(int*)(*args)[0].value;
-                break;
-            default:
-                break;
-        }
-        return var;
-    }
+    var_pextend(&lst, args);
+    Variable *copy = var_cpy(lst->value);
+    var_take_delete(&lst, var_len(args));
+    return copy;
 }
 
 Variable *readInt(Variable **args, VarList *lst) {
@@ -56,15 +35,8 @@ Variable *readInt(Variable **args, VarList *lst) {
 }
 
 Variable *println(Variable **args, VarList *lst) {
-    Variable *_arg0;
-    switch ((size_t)*args) {
-        case (size_t)NULL:
-            _arg0 = lst->value;
-            break;
-        default:
-            _arg0 = &(*args)[0];
-            break;
-    }
+    var_pextend(&lst, args);
+    Variable *_arg0 = var_get(lst, 0);
     
     switch (_arg0->type) {
         case Int:
@@ -74,32 +46,14 @@ Variable *println(Variable **args, VarList *lst) {
             break;
     }
 
+    var_take_delete(&lst, var_len(args));
     return NULL;
 }
 
 Variable *add(Variable **args, VarList *lst) {
-    Variable *_arg0;
-    switch ((size_t)*args) {
-        case (size_t)NULL:
-            _arg0 = lst->value;
-            break;
-        default:
-            _arg0 = &(*args)[0];
-            break;
-    }
-    Variable *_arg1;
-    switch ((size_t)(*args + 1 * (_arg0 == *args))) {
-        case (size_t)NULL:
-            if (_arg0 == lst->value) {
-                _arg1 = lst->next->value;
-            } else {
-                _arg1 = lst->value;
-            }
-            break;
-        default:
-            _arg1 = &(*args)[(_arg0 == lst->value)];
-            break;
-    }
+    var_pextend(&lst, args);
+    Variable *_arg0 = var_get(lst, 0);
+    Variable *_arg1 = var_get(lst, 1);
     if (_arg0->type != Int) {
         return NULL;
     }
@@ -110,10 +64,16 @@ Variable *add(Variable **args, VarList *lst) {
     sum->type = Int;
     sum->value = malloc(sizeof(int));
     *(int*)sum->value = *(int*)(_arg0->value) + *(int*)(_arg1->value);
+    var_take_delete(&lst, var_len(args));
     return sum;
 }
 "#.as_bytes();
 pub const VARLIST_H: &[u8] = r#"#pragma once
+
+enum Type {
+    Int,
+    Unit,
+};
 
 struct Variable;
 struct VarList;
@@ -121,24 +81,29 @@ struct VarList;
 typedef struct Variable Variable;
 typedef struct VarList VarList;
 
+extern Variable *var_create(enum Type tp, void *value);
+
 extern void var_enqueue(VarList **begin_list, Variable *var);
 
 extern void var_dequeue(VarList **begin_list);
 
-extern Variable *var_get(VarList **begin_list, int n);
+extern Variable *var_get(VarList *begin_list, int n);
 
 extern void var_delete(VarList *list);
 
 extern Variable *var_cpy(Variable *var);
+
+extern void var_take_delete(VarList **list, int n);
+
+extern void var_prepend(VarList **list, Variable *val);
+
+extern void var_pextend(VarList **list, Variable **args);
+
+extern void var_free(Variable *var);
 "#.as_bytes();
 pub const VARLIST_C: &[u8] = r#"#include <stdlib.h>
 #include <string.h>
 #include "varlist.h"
-
-enum Type {
-    Int,
-    Unit,
-};
 
 size_t type_size(enum Type type) {
     switch (type) {
@@ -154,6 +119,15 @@ struct Variable {
     void *value;
     enum Type type;
 };
+
+Variable *var_create(enum Type tp, void *value) {
+    Variable *var = malloc(sizeof(Variable));
+    *var = (Variable) {
+        .value = value,
+        .type = tp
+    };
+    return var;
+}
 
 struct VarList {
    Variable *value;
@@ -175,7 +149,7 @@ void var_enqueue(VarList **begin_list, Variable *var) {
     }
  }
 
-static void var_free(Variable *var) {
+void var_free(Variable *var) {
     free(var->value);
     free(var);
 }
@@ -187,12 +161,12 @@ void var_dequeue(VarList **begin_list) {
     *begin_list = next;
 }
 
-Variable *var_get(VarList **begin_list, int n) {
-    if (!*begin_list) return NULL;
+Variable *var_get(VarList *begin_list, int n) {
+    if (!begin_list) return NULL;
     if (n == 0) {
-        return (*begin_list)->value;
+        return begin_list->value;
     }
-    return var_get(&(*begin_list)->next, n - 1);
+    return var_get(begin_list->next, n - 1);
 }
 
 void var_delete(VarList *list) {
@@ -203,6 +177,12 @@ void var_delete(VarList *list) {
     var_delete(next);
 }
 
+void var_take_delete(VarList **list, int n) {
+    if (!n) return;
+    var_dequeue(list);
+    var_take_delete(list, n - 1);
+}
+
 Variable *var_cpy(Variable *var) {
     if (!var) return NULL;
     Variable *cpy = malloc(sizeof(Variable));
@@ -210,5 +190,30 @@ Variable *var_cpy(Variable *var) {
     cpy->value = malloc(type_size(cpy->type));
     memcpy(cpy->value, var->value, type_size(cpy->type));
     return cpy;
+}
+
+void var_prepend(VarList **lst, Variable *var) {
+    if (!var) return;
+    VarList *new_lst = malloc(sizeof(VarList));
+    *new_lst = (VarList) {
+        .value = var_cpy(var),
+        .next = *lst
+    };
+    *lst = new_lst;
+}
+
+int var_len(Variable **args) {
+    if (!args) return 0;
+    int cnt = 0;
+    while (*(args++)) {
+        cnt++;
+    }
+    return cnt;
+}
+
+void var_pextend(VarList **lst, Variable **args) {
+    for (int i = 0; i < var_len(args); i++) {
+        var_prepend(lst, args[i]);
+    }
 }
 "#.as_bytes();

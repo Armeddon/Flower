@@ -2,11 +2,6 @@
 #include <string.h>
 #include "varlist.h"
 
-enum Type {
-    Int,
-    Unit,
-};
-
 size_t type_size(enum Type type) {
     switch (type) {
         case Int:
@@ -21,6 +16,15 @@ struct Variable {
     void *value;
     enum Type type;
 };
+
+Variable *var_create(enum Type tp, void *value) {
+    Variable *var = malloc(sizeof(Variable));
+    *var = (Variable) {
+        .value = value,
+        .type = tp
+    };
+    return var;
+}
 
 struct VarList {
    Variable *value;
@@ -42,7 +46,7 @@ void var_enqueue(VarList **begin_list, Variable *var) {
     }
  }
 
-static void var_free(Variable *var) {
+void var_free(Variable *var) {
     free(var->value);
     free(var);
 }
@@ -54,12 +58,12 @@ void var_dequeue(VarList **begin_list) {
     *begin_list = next;
 }
 
-Variable *var_get(VarList **begin_list, int n) {
-    if (!*begin_list) return NULL;
+Variable *var_get(VarList *begin_list, int n) {
+    if (!begin_list) return NULL;
     if (n == 0) {
-        return (*begin_list)->value;
+        return begin_list->value;
     }
-    return var_get(&(*begin_list)->next, n - 1);
+    return var_get(begin_list->next, n - 1);
 }
 
 void var_delete(VarList *list) {
@@ -70,6 +74,12 @@ void var_delete(VarList *list) {
     var_delete(next);
 }
 
+void var_take_delete(VarList **list, int n) {
+    if (!n) return;
+    var_dequeue(list);
+    var_take_delete(list, n - 1);
+}
+
 Variable *var_cpy(Variable *var) {
     if (!var) return NULL;
     Variable *cpy = malloc(sizeof(Variable));
@@ -77,4 +87,29 @@ Variable *var_cpy(Variable *var) {
     cpy->value = malloc(type_size(cpy->type));
     memcpy(cpy->value, var->value, type_size(cpy->type));
     return cpy;
+}
+
+void var_prepend(VarList **lst, Variable *var) {
+    if (!var) return;
+    VarList *new_lst = malloc(sizeof(VarList));
+    *new_lst = (VarList) {
+        .value = var_cpy(var),
+        .next = *lst
+    };
+    *lst = new_lst;
+}
+
+int var_len(Variable **args) {
+    if (!args) return 0;
+    int cnt = 0;
+    while (*(args++)) {
+        cnt++;
+    }
+    return cnt;
+}
+
+void var_pextend(VarList **lst, Variable **args) {
+    for (int i = 0; i < var_len(args); i++) {
+        var_prepend(lst, args[i]);
+    }
 }

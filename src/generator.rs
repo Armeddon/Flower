@@ -52,10 +52,10 @@ impl Generator {
                 let mut function = if func_name == "main" {
                     "int main(void) {\n".to_string()
                 } else {
-                    format!("Variable *{func_name}(Variable **args, VarList *lst) {{\n")
+                    format!("static Variable *{func_name}(Variable **args, VarList *lst) {{\n")
                 };
                 function = format!("{}Variable *_result;\n", function);
-                for i in 0..(func_type.len() - 1) {
+                for _i in 0..(func_type.len() - 1) {
                     todo!();
                 }
                 for stmt in body {
@@ -93,7 +93,9 @@ impl Generator {
                 funcall = format!("{funcall}{{\n");
                 for i in 0..in_place_params.len() {
                     let NumLiteral::IntLiteral { value } = in_place_params[i];
-                    funcall = format!("{}Variable *_param{i} = {value};\n", funcall);
+                    funcall = format!("{}int *_param{i}_value = malloc(sizeof(int));\n", funcall);
+                    funcall = format!("{}*_param{i}_value = {value};\n", funcall);
+                    funcall = format!("{}Variable *_param{i} = var_create(Int, _param{i}_value);\n", funcall);
                 }
                 funcall = format!("{}Variable *_params[] = {{", funcall);
                 if !in_place_params.is_empty() {
@@ -105,6 +107,9 @@ impl Generator {
                 }
                 funcall = format!("{}NULL}};\n", funcall);
                 funcall = format!("{}Variable *_res = {func_name}(_params, _begin_list);\n", funcall);
+                for i in 0..in_place_params.len() {
+                    funcall = format!("{}var_free(_param{i});\n", funcall);
+                }
                 if pipe_type != Some(Pipe::Preserve) {
                     for _i in 0..(func_type.len() - 1 - in_place_params.len()) {
                         funcall = format!("{}var_dequeue(&_begin_list);\n", funcall);
@@ -124,7 +129,7 @@ impl Generator {
                     break;
                 }
             }
-            funcall = format!("{}_result = var_cpy(var_get(&_begin_list, 0));\n", funcall);
+            funcall = format!("{}_result = var_cpy(var_get(_begin_list, 0));\n", funcall);
             funcall = format!("{}var_delete(_begin_list);\n", funcall);
             funcall = format!("{funcall}}}\n");
             return Some(funcall);
