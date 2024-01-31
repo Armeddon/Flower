@@ -26,11 +26,13 @@ Variable *identity(Variable **args, VarList *lst) {
 }
 
 Variable *readInt(Variable **args, VarList *lst) {
+    var_pextend(&lst, args);
     int *input = malloc(sizeof(int));
     scanf("%d", input);
     Variable *var = malloc(sizeof(Variable));
     var->value = input;
     var->type = Int;
+    var_take_delete(&lst, var_len(args));
     return var;
 }
 

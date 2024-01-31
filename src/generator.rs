@@ -77,7 +77,10 @@ impl Generator {
 
         if let Node::Return { expr } = node.clone() {
             if let Some(expr) = Self::codify(*expr) {
-                return Some(format!("return {expr};\n"));
+                let mut ret = format!("int *_result_value = malloc(sizeof(int));\n");
+                ret = format!("{}*_result_value = {expr};\n", ret);
+                ret = format!("{}_result = var_create(Int, _result_value);\n", ret);
+                return Some(ret);
             }
         }
 
