@@ -82,7 +82,7 @@ impl Parser {
                         if let Some(Token::SpecialArrow) = self.peek(n + 2) {
                             if let Some((Node::DataType { types }, type_tokens)) = self.parse_expr(n + 3) {
                                 if let Some(Token::SpecialArrow) = self.peek(n + 3 + type_tokens){
-                                    let mut stmts = vec![];
+                                    let mut stmts = Vec::new();
                                     let mut cur = n + 3 + type_tokens + 1;
                                     loop {
                                         if let Some(Token::EndArrow) = self.peek(cur) {
