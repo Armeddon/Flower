@@ -2,10 +2,10 @@ Not yet finished!
 
 Most complex thing ready for now:
 
-define add3 :>
-Int -> Int -> Int -> Int :>
-&emsp;add => add
-;>
+define add3 :>  
+Int -> Int -> Int -> Int :>  
+&emsp;add => add  
+;>  
 
 define double :>  
 Int -> Int :>  
@@ -16,9 +16,9 @@ Int -> Int :>
 define main :>  
 () :>  
 &emsp;readInt =>  
-&emsp;double |>
-&emsp;double |>
-&emsp;double |>
-&emsp;add3 =>
-&emsp;println
+&emsp;double |>  
+&emsp;double |>  
+&emsp;double |>  
+&emsp;add3 =>  
+&emsp;println  
 ;>
