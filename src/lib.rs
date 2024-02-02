@@ -54,7 +54,7 @@ pub fn remove_c() -> io::Result<()>{
 macro_rules! compile {
     ( $($name:expr)? ) => {
          std::process::Command::new("gcc")
-             .arg("-O3")
+             .arg("-g")
              .arg("flwrstdlib.c")
              .arg("main.c")
              $(

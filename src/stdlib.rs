@@ -2,7 +2,7 @@ pub const STDLIB_H: &[u8] = r#"#pragma once
 
 #include "varlist.h"
 
-extern Variable *flwr_identity(Variable **args, VarList *lst);
+extern Variable *flwr_id(Variable **args, VarList *lst);
 
 extern Variable *flwr_readInt(Variable **args, VarList *lst);
 
@@ -16,9 +16,8 @@ pub const STDLIB_C: &[u8] = r#"#include <stddef.h>
 
 #include "flwrstdlib.h"
 #include "varlist.c"
-#include "varlist.h"
 
-Variable *flwr_identity(Variable **args, VarList *lst) {
+Variable *flwr_id(Variable **args, VarList *lst) {
     var_take_pextend(&lst, args, min(var_len(args), 1));
     Variable *copy = var_cpy(lst->value);
     var_take_delete(&lst, min(var_len(args), 1));
@@ -56,12 +55,12 @@ Variable *flwr_add(Variable **args, VarList *lst) {
     var_take_pextend(&lst, args, min(var_len(args), 2));
     Variable *_arg0 = var_get(lst, 0);
     Variable *_arg1 = var_get(lst, 1);
-    if (_arg0->type != Int) {
-        var_take_delete(&lst, min(var_len(args), 2));
+    if (var_get_type(_arg0) != Int) {
+        var_delete(lst);
         return NULL;
     }
-    if (_arg1->type != Int) {
-        var_take_delete(&lst, min(var_len(args), 2));
+    if (var_get_type(_arg1) != Int) {
+        var_delete(lst);
         return NULL;
     }
     Variable *sum = malloc(sizeof(Variable));
@@ -75,6 +74,7 @@ Variable *flwr_add(Variable **args, VarList *lst) {
 pub const VARLIST_H: &[u8] = r#"#pragma once
 
 enum Type {
+    Undefined,
     Int,
     Unit,
 };
@@ -87,7 +87,11 @@ typedef struct VarList VarList;
 
 extern int min(int a, int b);
 
+extern enum Type var_get_type(Variable *var);
+
 extern Variable *var_create(enum Type tp, void *value);
+
+extern VarList *var_list_copy(VarList *lst);
 
 extern void var_enqueue(VarList **begin_list, Variable *var);
 
@@ -118,6 +122,7 @@ size_t type_size(enum Type type) {
         case Int:
             return sizeof(int);
         case Unit:
+        case Undefined:
         default:
             return 0;
     }
@@ -132,6 +137,11 @@ struct Variable {
     enum Type type;
 };
 
+enum Type var_get_type(Variable *var) {
+    if (var == NULL) return Undefined;
+    return var->type;
+}
+
 Variable *var_create(enum Type tp, void *value) {
     Variable *var = malloc(sizeof(Variable));
     *var = (Variable) {
@@ -145,6 +155,16 @@ struct VarList {
    Variable *value;
    struct VarList *next;
 };
+
+VarList *var_list_copy(VarList *lst) {
+    if (lst == NULL) return NULL;
+    VarList *cpy = malloc(sizeof(VarList));
+    *cpy = (VarList) {
+        .value = var_cpy(lst->value),
+        .next = var_list_copy(lst->next)
+    };
+    return cpy;
+}
 
 void var_enqueue(VarList **begin_list, Variable *var) {
     VarList *node = malloc(sizeof(VarList));

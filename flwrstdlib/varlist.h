@@ -1,6 +1,7 @@
 #pragma once
 
 enum Type {
+    Undefined,
     Int,
     Unit,
 };
@@ -13,7 +14,11 @@ typedef struct VarList VarList;
 
 extern int min(int a, int b);
 
+extern enum Type var_get_type(Variable *var);
+
 extern Variable *var_create(enum Type tp, void *value);
+
+extern VarList *var_list_copy(VarList *lst);
 
 extern void var_enqueue(VarList **begin_list, Variable *var);
 

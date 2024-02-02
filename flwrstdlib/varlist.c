@@ -7,6 +7,7 @@ size_t type_size(enum Type type) {
         case Int:
             return sizeof(int);
         case Unit:
+        case Undefined:
         default:
             return 0;
     }
@@ -21,6 +22,11 @@ struct Variable {
     enum Type type;
 };
 
+enum Type var_get_type(Variable *var) {
+    if (var == NULL) return Undefined;
+    return var->type;
+}
+
 Variable *var_create(enum Type tp, void *value) {
     Variable *var = malloc(sizeof(Variable));
     *var = (Variable) {
@@ -34,6 +40,16 @@ struct VarList {
    Variable *value;
    struct VarList *next;
 };
+
+VarList *var_list_copy(VarList *lst) {
+    if (lst == NULL) return NULL;
+    VarList *cpy = malloc(sizeof(VarList));
+    *cpy = (VarList) {
+        .value = var_cpy(lst->value),
+        .next = var_list_copy(lst->next)
+    };
+    return cpy;
+}
 
 void var_enqueue(VarList **begin_list, Variable *var) {
     VarList *node = malloc(sizeof(VarList));

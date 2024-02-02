@@ -99,7 +99,7 @@ define main :>
 define readAndDouble :>
 Int :>
     readInt =>
-    identity |>
+    id |>
     add
 ;>
 define main :>
@@ -148,6 +148,29 @@ define main :>
             run_result!(42),
             "47\n".as_bytes(),
             "The test adds input(42) to 5 defined in-place"
+        )
+    }
+
+    #[test]
+    fn test_argument() {
+        let src = r#"
+define double :>
+Int -> Int :>
+    id |>
+    add
+;>
+define main :>
+() :>
+    readInt =>
+    double =>
+    println
+;>
+"#.bytes().collect();
+        compiles(src);
+        assert_eq!(
+            run_result!(42),
+            "84\n".as_bytes(),
+            "The test of function with an argument (doubling) for input(42)"
         )
     }
 

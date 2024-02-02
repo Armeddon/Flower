@@ -4,9 +4,8 @@
 
 #include "flwrstdlib.h"
 #include "varlist.c"
-#include "varlist.h"
 
-Variable *flwr_identity(Variable **args, VarList *lst) {
+Variable *flwr_id(Variable **args, VarList *lst) {
     var_take_pextend(&lst, args, min(var_len(args), 1));
     Variable *copy = var_cpy(lst->value);
     var_take_delete(&lst, min(var_len(args), 1));
@@ -44,12 +43,12 @@ Variable *flwr_add(Variable **args, VarList *lst) {
     var_take_pextend(&lst, args, min(var_len(args), 2));
     Variable *_arg0 = var_get(lst, 0);
     Variable *_arg1 = var_get(lst, 1);
-    if (_arg0->type != Int) {
-        var_take_delete(&lst, min(var_len(args), 2));
+    if (var_get_type(_arg0) != Int) {
+        var_delete(lst);
         return NULL;
     }
-    if (_arg1->type != Int) {
-        var_take_delete(&lst, min(var_len(args), 2));
+    if (var_get_type(_arg1) != Int) {
+        var_delete(lst);
         return NULL;
     }
     Variable *sum = malloc(sizeof(Variable));

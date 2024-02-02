@@ -40,8 +40,8 @@ impl Generator {
 
         if let Node::DataType { types } = node.clone() {
             match types.get(0)? {
-                DataType::Int => return Some("int".to_string()),
-                DataType::Unit => return Some("void".to_string()),
+                DataType::Int => return Some("Int".to_string()),
+                DataType::Unit => return Some("Unit".to_string()),
             }
         }
 
@@ -57,8 +57,24 @@ impl Generator {
                     function, (func_type.len()-1)
                 );
                 function = format!("{}Variable *_result = NULL;\n", function);
-                for _i in 0..(func_type.len() - 1) {
-                    todo!();
+                for i in 0..(func_type.len() - 1) {
+                    function = format!(
+                        "{}Variable *_arg{i} = var_get(lst, {i});\n",
+                        function
+                    );
+                }
+                for i in 0..(func_type.len() - 1) {
+                    function = format!(
+                        "{}if (var_get_type(_arg{i}) != {}) {{\n",
+                        function, Self::codify(
+                            Node::DataType { 
+                                types: vec![func_type[i]].try_into().unwrap()
+                            })?
+                    );
+                    function = format!(
+                        "{}var_take_delete(&lst, min(var_len(args), {}));\nreturn NULL;\n}}\n",
+                        function, func_type.len()-1
+                    );
                 }
                 for stmt in body {
                     if let Some(code) = Self::codify(stmt) {
@@ -67,15 +83,11 @@ impl Generator {
                         return None;
                     }
                 }
-                if func_name == "main" {
-                    function = format!("{}return 0;\n", function);
-                } else if func_type[0] != DataType::Unit {
-                    function = format!("{}return _result;\n", function);
-                }
                 function = format!(
                     "{}var_take_delete(&lst, min(var_len(args), {}));\n",
-                    function, func_type.len() - 1
+                    function, func_type.len()-1
                 );
+                function = format!("{}return _result;\n", function);
                 function = format!("{}}}\n", function);
                 return Some(function);
             }
@@ -97,7 +109,7 @@ impl Generator {
             let mut pipe = pipe;
             let mut pipe_type = pipe_type;
             let mut funcall = "{\n".to_string();
-            funcall = format!("{}VarList *_begin_list = NULL;\n", funcall);
+            funcall = format!("{}VarList *_begin_list = var_list_copy(lst);\n", funcall);
             loop {
                 funcall = format!("{funcall}{{\n");
                 for i in 0..in_place_params.len() {
@@ -115,7 +127,10 @@ impl Generator {
                     funcall = format!("{funcall}, ");
                 }
                 funcall = format!("{}NULL}};\n", funcall);
-                funcall = format!("{}Variable *_res = flwr_{func_name}(_params, _begin_list);\n", funcall);
+                funcall = format!(
+                    "{}Variable *_res = flwr_{func_name}(_params, _begin_list);\n",
+                    funcall
+                );
                 for i in 0..in_place_params.len() {
                     funcall = format!("{}var_free(_param{i});\n", funcall);
                 }

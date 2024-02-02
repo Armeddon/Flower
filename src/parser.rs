@@ -24,7 +24,7 @@ impl Parser {
                     DataType::Int,
                     DataType::Int,
                 ]));
-                map.insert("identity".to_string(), Vec::from([
+                map.insert("id".to_string(), Vec::from([
                     DataType::Int,
                     DataType::Int,
                 ]));

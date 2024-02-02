@@ -2,7 +2,7 @@
 
 #include "varlist.h"
 
-extern Variable *flwr_identity(Variable **args, VarList *lst);
+extern Variable *flwr_id(Variable **args, VarList *lst);
 
 extern Variable *flwr_readInt(Variable **args, VarList *lst);
 
