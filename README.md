@@ -18,13 +18,13 @@ Int :>
 
 define main :>  
 () :>  
-&emsp;readAndDouble =>
-&emsp;add 3 =>
-&emsp;identity |>
-&emsp;add =>
-&emsp;identity |>
-&emsp;add =>
-&emsp;five =>
-&emsp;add =>
-&emsp;println  
+&emsp;readAndDouble => 
+&emsp;add 3 => 
+&emsp;identity |> 
+&emsp;add => 
+&emsp;identity |> 
+&emsp;add => 
+&emsp;five => 
+&emsp;add => 
+&emsp;println   
 ;>  
