@@ -1,7 +1,6 @@
 use std::{
     fs,
     env,
-    process::{self, ExitStatus},
     io,
 };
 
@@ -51,12 +50,19 @@ pub fn remove_c() -> io::Result<()>{
     Ok(())
 }
 
-pub fn compile() -> io::Result<ExitStatus> {
-    process::Command::new("gcc")
-        .arg("-O3")
-        .arg("flwrstdlib.c")
-        .arg("main.c")
-        .status()
+#[macro_export]
+macro_rules! compile {
+    ( $($name:expr)? ) => {
+         std::process::Command::new("gcc")
+             .arg("-O3")
+             .arg("flwrstdlib.c")
+             .arg("main.c")
+             $(
+             .arg("-o")
+             .arg($name)
+             )*
+             .status()
+    };
 }
 
 pub fn translate(bytes: Vec<u8>) -> String {
