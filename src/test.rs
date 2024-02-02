@@ -174,6 +174,29 @@ define main :>
         )
     }
 
+    #[test]
+    fn test_several_arguments() {
+        let src = r#"
+define add3 :>
+Int -> Int -> Int -> Int :>
+    add => add
+;>
+define main :>
+() :>
+    readInt =>
+    readInt =>
+    readInt =>
+    add3 =>
+    println
+;>"#.bytes().collect();
+        compiles(src);
+        assert_eq!(
+            run_result!(4, 3, 2),
+            "9\n".as_bytes(),
+            "The test of function with several(3) arguments (sum) for input(4 3 2)"
+        )
+    }
+
     fn compiles(src: Vec<u8>) {
         let code = translate(src);
         write_c_code(code).expect("Error writing c code!");
