@@ -49,12 +49,14 @@ impl Generator {
             if let Some(_) = Self::codify(Node::DataType { 
                 types: VecDeque::from([*func_type.last()?])
             }) {
-                let mut function = if func_name == "main" {
-                    "int main(void) {\n".to_string()
-                } else {
-                    format!("static Variable *{func_name}(Variable **args, VarList *lst) {{\n")
-                };
-                function = format!("{}Variable *_result;\n", function);
+                let mut function = format!(
+                    "static Variable *flwr_{func_name}(Variable **args, VarList *lst) {{\n"
+                );
+                function = format!(
+                    "{}var_take_pextend(&lst, args, min(var_len(args), {}));\n",
+                    function, (func_type.len()-1)
+                );
+                function = format!("{}Variable *_result = NULL;\n", function);
                 for _i in 0..(func_type.len() - 1) {
                     todo!();
                 }
@@ -70,6 +72,10 @@ impl Generator {
                 } else if func_type[0] != DataType::Unit {
                     function = format!("{}return _result;\n", function);
                 }
+                function = format!(
+                    "{}var_take_delete(&lst, min(var_len(args), {}));\n",
+                    function, func_type.len() - 1
+                );
                 function = format!("{}}}\n", function);
                 return Some(function);
             }
@@ -109,7 +115,7 @@ impl Generator {
                     funcall = format!("{funcall}, ");
                 }
                 funcall = format!("{}NULL}};\n", funcall);
-                funcall = format!("{}Variable *_res = {func_name}(_params, _begin_list);\n", funcall);
+                funcall = format!("{}Variable *_res = flwr_{func_name}(_params, _begin_list);\n", funcall);
                 for i in 0..in_place_params.len() {
                     funcall = format!("{}var_free(_param{i});\n", funcall);
                 }
@@ -153,6 +159,16 @@ impl Generator {
             result = format!("{result}{code}");
         }
 
+        result = format!("{result}{}", Self::add_main());
+
         result
+    }
+
+    fn add_main() -> String {
+        let mut main = "int main(void) {\n".to_string();
+        main = format!("{}flwr_main(NULL, NULL);\n", main);
+        main = format!("{}return 0;\n", main);
+        main = format!("{}}}", main);
+        main
     }
 }

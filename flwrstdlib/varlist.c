@@ -12,6 +12,10 @@ size_t type_size(enum Type type) {
     }
 }
 
+int min(int a, int b) {
+    return a < b ? a : b;
+}
+
 struct Variable {
     void *value;
     enum Type type;
@@ -108,8 +112,8 @@ int var_len(Variable **args) {
     return cnt;
 }
 
-void var_pextend(VarList **lst, Variable **args) {
-    for (int i = 0; i < var_len(args); i++) {
+void var_take_pextend(VarList **lst, Variable **args, int n) {
+    for (int i = 0; i < n; i++) {
         var_prepend(lst, args[i]);
     }
 }
