@@ -16,6 +16,7 @@ pub const STDLIB_C: &[u8] = r#"#include <stddef.h>
 
 #include "flwrstdlib.h"
 #include "varlist.c"
+#include "varlist.h"
 
 Variable *flwr_id(Variable **args, VarList *lst) {
     var_take_pextend(&lst, args, min(var_len(args), 1));

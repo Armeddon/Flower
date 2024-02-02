@@ -76,7 +76,7 @@ define main :>
     }
 
     #[test]
-    fn test_pipe() {
+    fn test_preserve() {
         let src = r#"
 define main :>
 () :>
@@ -90,6 +90,25 @@ define main :>
             run_result!(42),
             "42\n42\n".as_bytes(),
             "The test is double printing input(42)"
+        )
+    }
+
+    #[test]
+    fn test_prepend() {
+        let src = r#"
+define main :>
+() :>
+    readInt =>
+    readInt =>
+    readInt =>
+    add +>
+    println
+;>"#.bytes().collect();
+        compiles(src);
+        assert_eq!(
+            run_result!(4, 2, 3),
+            "6\n".as_bytes(),
+            "The test is the sum of first two numbers in input(4 2 3)"
         )
     }
 
