@@ -6,15 +6,17 @@ use crate::node::{Node, Pipe};
 pub struct Parser {
     tokens: VecDeque<Token>,
     functions: HashMap<String, Vec<DataType>>,
+    this_function: Vec<DataType>,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         Self { 
+            this_function: vec![],
             tokens: tokens.try_into().unwrap(),
             functions: {
                 let mut map = HashMap::new();
-                map.insert("readInt".to_string(), Vec::from([DataType::Unit]));
+                map.insert("readInt".to_string(), Vec::from([DataType::Int]));
                 map.insert("println".to_string(), Vec::from([
                     DataType::Int,
                     DataType::Unit,
@@ -84,6 +86,7 @@ impl Parser {
                                 if let Some(Token::SpecialArrow) = self.peek(n + 3 + type_tokens){
                                     let mut stmts = Vec::new();
                                     let mut cur = n + 3 + type_tokens + 1;
+                                    self.this_function = types.clone().try_into().unwrap();
                                     loop {
                                         if let Some(Token::EndArrow) = self.peek(cur) {
                                             self.functions.insert(name.clone(), types.clone().try_into().unwrap());
@@ -122,6 +125,7 @@ impl Parser {
                     Token::PipeArrow => {
                         if let Some((stmt, tokens)) = self.parse_stmt(cur + 1) {
                             return Some((Node::Funcall {
+                                this_func_type: self.this_function.clone(),
                                 func_name: name.clone(),
                                 func_type: if let Some(types) = self.functions.get(&name) {
                                     types.clone() } else { return None; },
@@ -134,6 +138,7 @@ impl Parser {
                     Token::PreserveArrow => {
                         if let Some((stmt, tokens)) = self.parse_stmt(cur + 1) {
                             return Some((Node::Funcall {
+                                this_func_type: self.this_function.clone(),
                                 func_name: name.clone(),
                                 func_type: if let Some(types) = self.functions.get(&name) {
                                     types.clone() } else { return None },
@@ -146,6 +151,7 @@ impl Parser {
                     Token::PrependArrow => {
                         if let Some((stmt, tokens)) = self.parse_stmt(cur + 1) {
                             return Some((Node::Funcall {
+                                this_func_type: self.this_function.clone(),
                                 func_name: name.clone(),
                                 func_type: if let Some(types) = self.functions.get(&name) {
                                     types.clone() } else { return None },
@@ -157,6 +163,7 @@ impl Parser {
                     }
                     _ => {
                         return Some((Node::Funcall { 
+                            this_func_type: self.this_function.clone(),
                             func_name: name.clone(),
                             func_type: if let Some(types) = self.functions.get(&name) {
                                 types.clone() } else { return None; },

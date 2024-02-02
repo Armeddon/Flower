@@ -92,7 +92,7 @@ extern enum Type var_get_type(Variable *var);
 
 extern Variable *var_create(enum Type tp, void *value);
 
-extern VarList *var_list_copy(VarList *lst);
+extern VarList *var_take_copy(VarList *lst, int n);
 
 extern void var_enqueue(VarList **begin_list, Variable *var);
 
@@ -139,7 +139,7 @@ struct Variable {
 };
 
 enum Type var_get_type(Variable *var) {
-    if (var == NULL) return Undefined;
+    if (!var) return Undefined;
     return var->type;
 }
 
@@ -157,12 +157,13 @@ struct VarList {
    struct VarList *next;
 };
 
-VarList *var_list_copy(VarList *lst) {
-    if (lst == NULL) return NULL;
+VarList *var_take_copy(VarList *lst, int n) {
+    if (!lst) return NULL;
+    if (!n) return NULL;
     VarList *cpy = malloc(sizeof(VarList));
     *cpy = (VarList) {
         .value = var_cpy(lst->value),
-        .next = var_list_copy(lst->next)
+        .next = var_take_copy(lst->next, n - 1)
     };
     return cpy;
 }

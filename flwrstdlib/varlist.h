@@ -18,7 +18,7 @@ extern enum Type var_get_type(Variable *var);
 
 extern Variable *var_create(enum Type tp, void *value);
 
-extern VarList *var_list_copy(VarList *lst);
+extern VarList *var_take_copy(VarList *lst, int n);
 
 extern void var_enqueue(VarList **begin_list, Variable *var);
 

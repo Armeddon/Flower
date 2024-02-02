@@ -54,7 +54,7 @@ impl Generator {
                 );
                 function = format!(
                     "{}var_take_pextend(&lst, args, min(var_len(args), {}));\n",
-                    function, (func_type.len()-1)
+                    function, func_type.len()-1
                 );
                 function = format!("{}Variable *_result = NULL;\n", function);
                 for i in 0..(func_type.len() - 1) {
@@ -102,14 +102,17 @@ impl Generator {
             }
         }
 
-        if let Node::Funcall { func_name, func_type, in_place_params, pipe, pipe_type } = node.clone() {
+        if let Node::Funcall { this_func_type, func_name, func_type, in_place_params, pipe, pipe_type } = node.clone() {
             let mut func_name = func_name;
             let mut func_type = func_type;
             let mut in_place_params = in_place_params;
             let mut pipe = pipe;
             let mut pipe_type = pipe_type;
             let mut funcall = "{\n".to_string();
-            funcall = format!("{}VarList *_begin_list = var_list_copy(lst);\n", funcall);
+            funcall = format!(
+                "{}VarList *_begin_list = var_take_copy(lst, {});\n",
+                funcall, this_func_type.len()-1
+            );
             loop {
                 funcall = format!("{funcall}{{\n");
                 for i in 0..in_place_params.len() {
@@ -147,7 +150,7 @@ impl Generator {
                 }
                 funcall = format!("{funcall}}}\n");
                 if let Some(node) = pipe.clone() {
-                    if let Node::Funcall { func_name: f_n, func_type: f_t, in_place_params: i_p_p, pipe: p, pipe_type: p_t } = *node {
+                    if let Node::Funcall { this_func_type: _, func_name: f_n, func_type: f_t, in_place_params: i_p_p, pipe: p, pipe_type: p_t } = *node {
                         func_name = f_n;
                         func_type = f_t;
                         in_place_params = i_p_p;

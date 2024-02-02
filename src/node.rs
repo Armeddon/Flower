@@ -34,6 +34,7 @@ pub enum Node {
         in_place_params: Vec<NumLiteral>,
         pipe: Option<Box<Node>>,
         pipe_type: Option<Pipe>,
+        this_func_type: Vec<DataType>,
     },
 }
 
