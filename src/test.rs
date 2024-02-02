@@ -76,6 +76,24 @@ define main :>
     }
 
     #[test]
+    fn test_pipe() {
+        let src = r#"
+define main :>
+() :>
+    readInt =>
+    println |>
+    println
+;>"#.bytes().collect();
+
+        compiles(src);
+        assert_eq!(
+            run_result!(42),
+            "42\n42\n".as_bytes(),
+            "The test is double printing input(42)"
+        )
+    }
+
+    #[test]
     fn test_functions() {
         let src = r#"
 define readAndDouble :>
