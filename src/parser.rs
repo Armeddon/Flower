@@ -143,6 +143,18 @@ impl Parser {
                             }, cur - n + tokens + 1));
                         }
                     },
+                    Token::PrependArrow => {
+                        if let Some((stmt, tokens)) = self.parse_stmt(cur + 1) {
+                            return Some((Node::Funcall {
+                                func_name: name.clone(),
+                                func_type: if let Some(types) = self.functions.get(&name) {
+                                    types.clone() } else { return None },
+                                in_place_params,
+                                pipe: Some(Box::from(stmt)),
+                                pipe_type:  Some(Pipe::Prepend),
+                            }, cur - n + tokens + 1));
+                        }
+                    }
                     _ => {
                         return Some((Node::Funcall { 
                             func_name: name.clone(),

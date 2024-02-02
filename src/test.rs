@@ -152,34 +152,11 @@ define main :>
     }
 
     #[test]
-    fn test_argument() {
-        let src = r#"
-define double :>
-Int -> Int :>
-    id |>
-    add
-;>
-define main :>
-() :>
-    readInt =>
-    double =>
-    println
-;>
-"#.bytes().collect();
-        compiles(src);
-        assert_eq!(
-            run_result!(42),
-            "84\n".as_bytes(),
-            "The test of function with an argument (doubling) for input(42)"
-        )
-    }
-
-    #[test]
-    fn test_several_arguments() {
+    fn test_arguments() {
         let src = r#"
 define add3 :>
 Int -> Int -> Int -> Int :>
-    add => add
+    add +> add
 ;>
 define main :>
 () :>

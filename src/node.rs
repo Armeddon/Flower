@@ -6,6 +6,7 @@ use crate::token::{NumLiteral, DataType };
 pub enum Pipe {
     Normal,
     Preserve,
+    Prepend,
 }
 
 #[derive(Debug, Clone)]

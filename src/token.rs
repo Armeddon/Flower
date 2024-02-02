@@ -47,4 +47,5 @@ pub enum Token {
     },
     PipeArrow,
     PreserveArrow,
+    PrependArrow,
 }

@@ -155,6 +155,11 @@ impl Lexer {
             return Some(Token::PreserveArrow);
         }
 
+        if self.parse_word("+>") {
+            self.consume(2);
+            return Some(Token::PrependArrow);
+        }
+
         if let Some((literal, bytes)) = self.parse_literal() {
             self.consume(bytes);
             return Some(Token::Numliteral { literal });

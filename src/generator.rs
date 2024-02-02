@@ -139,7 +139,12 @@ impl Generator {
                         funcall = format!("{}var_dequeue(&_begin_list);\n", funcall);
                     }
                 }
-                funcall = format!("{}if (_res != NULL) {{\nvar_enqueue(&_begin_list, _res);\n}}\n", funcall);
+                funcall = format!("{}if (_res != NULL) {{\n", funcall);
+                if pipe_type.is_some() && pipe_type.unwrap() == Pipe::Prepend {
+                    funcall = format!("{}var_prepend(&_begin_list, _res);\n}}\n", funcall);
+                } else {
+                    funcall = format!("{}var_enqueue(&_begin_list, _res);\n}}\n", funcall);
+                }
                 funcall = format!("{funcall}}}\n");
                 if let Some(node) = pipe.clone() {
                     if let Node::Funcall { func_name: f_n, func_type: f_t, in_place_params: i_p_p, pipe: p, pipe_type: p_t } = *node {
