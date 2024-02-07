@@ -74,11 +74,6 @@ impl Parser {
     fn parse_stmt(&mut self, n: usize) -> Option<(Node, usize)> {
         if let Some(Token::Keyword { keyword }) = self.peek(n) {
             match keyword {
-                Keyword::Exit => {
-                    if let Some((expr, tokens)) = self.parse_expr(n + 1) {
-                        return Some((Node::Exit { expr: Box::from(expr) }, tokens + 1));
-                    }
-                },
                 Keyword::Define => {
                     if let Some(Token::Identifier { name }) = self.peek(n + 1) {
                         if let Some(Token::SpecialArrow) = self.peek(n + 2) {

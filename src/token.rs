@@ -1,6 +1,5 @@
 #[derive(Debug, Clone, Copy)]
 pub enum Keyword {
-    Exit,
     Define,
 }
 
@@ -50,8 +49,16 @@ pub enum Token {
     PrependArrow,
 }
 
+impl Keyword {
+    fn keywords() -> Vec<Self> {
+        vec![
+            Keyword::Define,
+        ]
+    }
+}
+
 impl DataType {
-    pub fn data_types() -> Vec<Self> {
+    fn data_types() -> Vec<Self> {
         vec![
             DataType::Int,
             DataType::Unit,
@@ -59,11 +66,30 @@ impl DataType {
     }
 }
 
-impl NumLiteral {
-    pub fn num_literals() -> Vec<Self> {
+impl Token {
+    pub fn arrows() -> Vec<Token> {
         vec![
-            NumLiteral::IntLiteral { value: 0 },
+            Token::SpecialArrow,
+            Token::EndArrow,
+            Token::TypeArrow,
+            Token::PipeArrow,
+            Token::PreserveArrow,
+            Token::PrependArrow,
         ]
+    }
+
+    pub fn keywords() -> Vec<Token> {
+        Keyword::keywords()
+            .into_iter()
+            .map(|keyword: Keyword| Token::Keyword { keyword })
+            .collect()
+    }
+    
+    pub fn data_types() -> Vec<Token> {
+        DataType::data_types()
+            .into_iter()
+            .map(|data_type: DataType| Token::DataType { data_type })
+            .collect()
     }
 }
 
@@ -71,7 +97,6 @@ impl From<Token> for String {
     fn from(token: Token) -> Self {
         match token {
             Token::Keyword { keyword: kw } => match kw {
-                Keyword::Exit => "exit".to_string(),
                 Keyword::Define => "define".to_string(),
             },
             Token::NumLiteral { literal: lit } => match lit {

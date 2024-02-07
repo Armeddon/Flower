@@ -32,12 +32,6 @@ impl Generator {
             return Some(format!("{literal}"));
         }
 
-        if let Node::Exit { expr } = node.clone() {
-            if let Some(code) = Self::codify(*expr) {
-                return Some(format!("exit({code});\n"));
-            }
-        }
-
         if let Node::DataType { types } = node.clone() {
             match types.get(0)? {
                 DataType::Int => return Some("Int".to_string()),

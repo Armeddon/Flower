@@ -14,9 +14,6 @@ pub enum Node {
     NumLiteral {
         literal: NumLiteral,
     },
-    Exit {
-        expr: Box<Node>,
-    },
     DataType {
         types: VecDeque<DataType>,
     },

@@ -1,10 +1,9 @@
 use std::collections::VecDeque;
 
-use crate::token::{Token, Keyword, NumLiteral, DataType};
-
-struct Lexer {
-    source: VecDeque<u8>
-}
+use crate::token::{
+    Token, 
+    NumLiteral, 
+};
 
 pub fn tokenize(source: Vec<u8>) -> Vec<Token> {
     let mut lexer = Lexer::new(source);
@@ -15,40 +14,37 @@ pub fn tokenize(source: Vec<u8>) -> Vec<Token> {
     tokens
 }
 
+struct Lexer {
+    source: VecDeque<u8>
+}
+
 impl Lexer {
     fn new(source: Vec<u8>) -> Self {
         Self { source: source.try_into().unwrap() }
     }
 
     fn tokenize(&mut self) -> Option<Token> {
-        self.tokenize_whitespace();
-
-        self.tokenize_none()?;
-
+        self.consume_whitespace();
+        self.check_if_none()?;
         if let Some(kw) = self.tokenize_keyword() {
             return Some(kw);
         }
-
         if let Some(dt) = self.tokenize_datatype() {
             return Some(dt);
         }
-
         if let Some(arr) = self.tokenize_arrow() {
             return Some(arr);
         }
-
         if let Some(lit) = self.tokenize_literal() {
             return Some(lit);
         }
-
         if let Some(ident) = self.tokenize_identifier() {
             return Some(ident);
         }
-
         None
     }
 
-    fn tokenize_whitespace(&mut self) -> () {
+    fn consume_whitespace(&mut self) -> () {
         while let Some(byte) = self.peek(0) {
             if !byte.is_ascii_whitespace() {
                 break;
@@ -57,95 +53,72 @@ impl Lexer {
         }
     }
 
-    fn tokenize_none(&self) -> Option<()> {
+    fn check_if_none(&self) -> Option<()> {
         self.peek(0)?;
         Some(())
     }
 
     fn tokenize_keyword(&mut self) -> Option<Token> {
-        if self.tokenize_word("exit") {
-            self.consume(4);
-            return Some(Token::Keyword { keyword: Keyword::Exit });
-        }
-
-        if self.tokenize_word("define") {
-            self.consume(6);
-            return Some(Token::Keyword { keyword: Keyword::Define });
+        for keyword in Token::keywords() {
+            if self.try_tokenize(&keyword).is_none() {
+                continue
+            }
+            return Some(keyword);
         }
         None
     }
 
     fn tokenize_datatype(&mut self) -> Option<Token> {
-        if self.tokenize_word("Int") {
-            self.consume(3);
-            return Some(Token::DataType { data_type: DataType::Int });
-        }
-
-        if self.tokenize_word("()") {
-            self.consume(2);
-            return Some(Token::DataType { data_type: DataType::Unit });
+        for data_type in Token::data_types() {
+            if self.try_tokenize(&data_type).is_none() {
+                continue;
+            }
+            return Some(data_type);
         }
         None
     }
 
     fn tokenize_arrow(&mut self) -> Option<Token> {
-       if self.tokenize_word("->") {
-            self.consume(2);
-            return Some(Token::TypeArrow);
-        }
-
-        if self.tokenize_word(":>") {
-            self.consume(2);
-            return Some(Token::SpecialArrow);
-        }
-
-        if self.tokenize_word(";>") {
-            self.consume(2);
-            return Some(Token::EndArrow);
-        }
-
-        if self.tokenize_word("=>") {
-            self.consume(2);
-            return Some(Token::PipeArrow);
-        }
-
-        if self.tokenize_word("|>") {
-            self.consume(2);
-            return Some(Token::PreserveArrow);
-        }
-
-        if self.tokenize_word("+>") {
-            self.consume(2);
-            return Some(Token::PrependArrow);
+        for arr in Token::arrows() {
+            if self.try_tokenize(&arr).is_none() {
+                continue;
+            }
+            return Some(arr);
         }
         None
     }
 
-    fn tokenize_word(&self, word: &str) -> bool {
-        fn tokenize_keyword_helper(source: &VecDeque<u8>, word: &[u8], n: usize) -> bool {
-            if n == word.len() {
-                if let Some(byte) = source.get(n - 1) {
-                    if !byte.is_ascii_alphanumeric() {
-                        return true;
-                    }
-                }
-                if let Some(byte) = source.get(n) {
-                    return !byte.is_ascii_alphanumeric();
-                }
-                return true;
-            }
-            if source[n] == word[n] {
-                return tokenize_keyword_helper(source, word, n + 1);
-            }
+    fn try_tokenize(&mut self, token: &Token) -> Option<Token> {
+        let token_str: String = token.clone().into();
 
-            false
+        if self.peek(token_str.len()-1).is_none() {
+            return None;
         }
 
-        if self.peek(word.len()-1).is_some() {
-            tokenize_keyword_helper(&self.source, word.as_bytes(), 0)
-        } else { 
-            false 
+        if Self::try_tokenize_helper(&self.source, token_str.as_bytes(), 0) {
+            self.consume(token_str.len());
+            return Some(token.clone());
         }
+
+        None
+    }
+
+    fn try_tokenize_helper(source: &VecDeque<u8>, word: &[u8], n: usize) -> bool {
+       if n == word.len() {
+            if let Some(byte) = source.get(n - 1) {
+                if !byte.is_ascii_alphanumeric() {
+                    return true;
+                }
+            }
+            if let Some(byte) = source.get(n) {
+                return !byte.is_ascii_alphanumeric();
+            }
+            return true;
+        }
+        if source[n] == word[n] {
+            return Self::try_tokenize_helper(source, word, n + 1);
+        }
+        false
     }
 
     fn tokenize_literal(&mut self) -> Option<Token> {
@@ -157,7 +130,6 @@ impl Lexer {
                 return None;
             }
         }
-
         while let Some(byte) = self.peek(i) {
             if !byte.is_ascii_digit() {
                 break;
@@ -166,8 +138,8 @@ impl Lexer {
             number += (byte - b'0') as i32;
             i += 1;
         }
-        
         self.consume(i);
+
         Some(Token::NumLiteral {
             literal: NumLiteral::IntLiteral {
                 value: number 
@@ -184,7 +156,6 @@ impl Lexer {
                 return None;
             }
         }
-
         while let Some(byte) = self.peek(i) {
             if !byte.is_ascii_alphanumeric() {
                 break;
@@ -192,29 +163,20 @@ impl Lexer {
             identifier.push(byte);
             i += 1;
         }
-
         self.consume(i);
         
-        unsafe {
-            Some(
-                Token::Identifier { 
-                    name:  String::from_utf8_unchecked(identifier),
-                }
-            )
-        }
+        Some(
+            Token::Identifier { 
+                name:  unsafe{String::from_utf8_unchecked(identifier)},
+            }
+        )
     }
 
     fn peek(&self, n: usize) -> Option<u8> {
-        if n >= self.source.len() {
-            None
-        } else {
-            Some(self.source[n])
-        }
+        self.source.get(n).cloned()
     }
 
     fn consume(&mut self, n: usize) {
-        for _ in 0..n {
-            self.source.pop_front();
-        }
+        self.source.drain(0..n);
     }
 }
