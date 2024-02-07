@@ -16,7 +16,7 @@ mod generator;
 
 use token::Token;
 use node::Node;
-use lexer::Lexer;
+use lexer::tokenize;
 use parser::Parser;
 use generator::Generator;
 
@@ -69,11 +69,6 @@ pub fn translate(bytes: Vec<u8>) -> String {
     let tokens = tokenize(bytes);
     let nodes = parse(tokens).expect("Error parsing!");
     generate(nodes)
-}
-
-pub fn tokenize(bytes: Vec<u8>) -> Vec<Token> {
-    let mut lexer = Lexer::new(bytes);
-    lexer.tokenize()
 }
 
 pub fn parse(tokens: Vec<Token>) -> Option<Vec<Node>> {

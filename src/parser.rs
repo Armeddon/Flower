@@ -50,7 +50,7 @@ impl Parser {
     }
 
     fn parse_expr(&self, n: usize) -> Option<(Node, usize)>{
-        if let Some(Token::Numliteral { literal }) = self.peek(n) {
+        if let Some(Token::NumLiteral { literal }) = self.peek(n) {
             return Some((Node::NumLiteral { literal }, 1));
         }
         if let Some(Token::DataType { data_type }) = self.peek(n) {
@@ -119,7 +119,7 @@ impl Parser {
             let mut in_place_params = Vec::new();
             while let Some(token) = self.peek(cur) {
                 match token {
-                    Token::Numliteral { literal } => {
+                    Token::NumLiteral { literal } => {
                         in_place_params.push(literal);
                     },
                     Token::PipeArrow => {
