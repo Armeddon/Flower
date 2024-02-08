@@ -16,23 +16,27 @@ pub fn parse(tokens: Vec<Token>) -> Option<Vec<Node>> {
     }
 }
 
-fn std_functions() -> HashMap<String, Vec<DataType>> {
-    let mut map = HashMap::new();
-    map.insert("readInt".to_string(), Vec::from([DataType::Int]));
-    map.insert("println".to_string(), Vec::from([
-        DataType::Int,
-        DataType::Unit,
-    ]));
-    map.insert("add".to_string(), Vec::from([
-        DataType::Int,
-        DataType::Int,
-        DataType::Int,
-    ]));
-    map.insert("id".to_string(), Vec::from([
-       DataType::Int,
-       DataType::Int,
-    ]));
-    map 
+macro_rules! std_functions {
+    () => {
+        {
+            let mut map = HashMap::new();
+            map.insert("readInt".to_string(), Vec::from([DataType::Int]));
+            map.insert("println".to_string(), Vec::from([
+                DataType::Int,
+                DataType::Unit,
+            ]));
+            map.insert("add".to_string(), Vec::from([
+                DataType::Int,
+                DataType::Int,
+                DataType::Int,
+            ]));
+            map.insert("id".to_string(), Vec::from([
+               DataType::Int,
+               DataType::Int,
+            ]));
+            map
+        }
+    };
 }
 
 struct Parser {
@@ -46,7 +50,7 @@ impl Parser {
         Self { 
             this_function: vec![],
             tokens: tokens.try_into().unwrap(),
-            functions: std_functions(),
+            functions: std_functions!(),
         }
     }
 
