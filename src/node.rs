@@ -10,28 +10,28 @@ pub enum Pipe {
 }
 
 #[derive(Debug, Clone)]
+pub struct Define {
+    pub func_name: String,
+    pub func_type: Vec<DataType>,
+    pub body: Vec<Node>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Funcall {
+    pub func_name: String,
+    pub func_type: Vec<DataType>,
+    pub in_place_params: Vec<NumLiteral>,
+    pub pipe: Option<Box<Node>>,
+    pub pipe_type: Option<Pipe>,
+    pub this_func_type: Vec<DataType>,
+}
+
+#[derive(Debug, Clone)]
 pub enum Node {
-    NumLiteral {
-        literal: NumLiteral,
-    },
-    DataType {
-        types: VecDeque<DataType>,
-    },
-    Define {
-        func_name: String,
-        func_type: Vec<DataType>,
-        body: Vec<Node>,
-    },
-    Return {
-        expr: Box<Node>,
-    },
-    Funcall {
-        func_name: String,
-        func_type: Vec<DataType>,
-        in_place_params: Vec<NumLiteral>,
-        pipe: Option<Box<Node>>,
-        pipe_type: Option<Pipe>,
-        this_func_type: Vec<DataType>,
-    },
+    NumLiteral(NumLiteral),
+    DataType(VecDeque<DataType>),
+    Define(Define),
+    Return(Box<Node>),
+    Funcall (Funcall),
 }
 

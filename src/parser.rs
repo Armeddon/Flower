@@ -1,7 +1,7 @@
 use std::collections::{VecDeque, HashMap};
 
 use crate::token::{ Token, Keyword, DataType };
-use crate::node::{ Node, Pipe };
+use crate::node::{ Define, Funcall, Node, Pipe };
 
 pub fn parse(tokens: Vec<Token>) -> Option<Vec<Node>> {
     let mut parser = Parser::new(tokens);
@@ -62,7 +62,7 @@ impl Parser {
             return Some(fc);
         }
         if let Some(expr) = self.try_parse_expr() {
-            return Some(Node::Return { expr: Box::from(expr) });
+            return Some(Node::Return(Box::from(expr)));
         }
         None
     }
@@ -75,20 +75,20 @@ impl Parser {
     }
 
     fn try_parse_literal(&mut self) -> Option<Node> {
-        if let Some(Token::NumLiteral { literal }) = self.peek(0) {
+        if let Some(Token::NumLiteral(literal)) = self.peek(0) {
             self.consume(1);
-            return Some(Node::NumLiteral { literal });
+            return Some(Node::NumLiteral(literal));
         }
         None
     }
 
     fn try_parse_funcall(&mut self) -> Option<Node> {
-        let Token::Identifier { name } = self.peek(0)? else {
+        let Token::Identifier(name) = self.peek(0)? else {
             return None;
         };
         self.consume(1);
         let mut in_place_params = Vec::new();
-        while let Some(Token::NumLiteral { literal }) = self.peek(0) {
+        while let Some(Token::NumLiteral(literal)) = self.peek(0) {
             in_place_params.push(literal);
             self.consume(1);
         }
@@ -107,7 +107,7 @@ impl Parser {
         let pipe = pipe_funcall.map(|node: Node| {
             Box::from(node)
         });
-        Some(Node::Funcall {
+        Some(Node::Funcall(Funcall{
             this_func_type: self.this_function.clone(),
             func_name: name.clone(),
             func_type: if let Some(types) = self.functions.get(&name) {
@@ -126,14 +126,14 @@ impl Parser {
                     }
                 }
             },
-        })
+        }))
     }
 
     fn try_parse_keyword(&mut self) -> Option<Node> {
         if self.peek(0).is_none() {
             return None;
         }
-        let Token::Keyword { keyword } = self.peek(0).unwrap()
+        let Token::Keyword(keyword) = self.peek(0).unwrap()
         else {
             return None;
         };
@@ -146,7 +146,7 @@ impl Parser {
     }
 
     fn try_parse_define(&mut self) -> Option<Node> {
-        let Token::Identifier { name } = self.peek(0)? else {
+        let Token::Identifier(name) = self.peek(0)? else {
             return None;
         };
         self.consume(1);
@@ -154,7 +154,7 @@ impl Parser {
             return None;
         }
         self.consume(1);
-        let Node::DataType { types } = self.try_parse_data_type()? else {
+        let Node::DataType(types) = self.try_parse_data_type()? else {
             return None;
         };
         if self.peek(0)? != Token::SpecialArrow {
@@ -174,15 +174,15 @@ impl Parser {
             stmts.push(stmt);
         }
         self.functions.insert(name.clone(), types.clone().try_into().unwrap());
-        return Some(Node::Define {
+        return Some(Node::Define(Define{
             func_name: name,
             func_type: types.try_into().unwrap(),
             body: stmts,
-        });
+        }));
     }
 
     fn try_parse_data_type(&mut self) -> Option<Node> { 
-        let Token::DataType { data_type } = self.peek(0)? else
+        let Token::DataType(data_type) = self.peek(0)? else
         {
             return None;
         };
@@ -190,19 +190,17 @@ impl Parser {
         self.consume(1);
 
         if self.peek(0).is_none() {
-            return Some(Node::DataType { types: VecDeque::from([data_type]) });
+            return Some(Node::DataType(VecDeque::from([data_type])));
         }
         if self.peek(0).unwrap() != Token::TypeArrow {
-            return Some(Node::DataType { types: VecDeque::from([data_type]) });
+            return Some(Node::DataType(VecDeque::from([data_type])));
         }
         self.consume(1);
-        if let Some(Node::DataType { mut types }) = self.try_parse_data_type() {
-            return Some(Node::DataType { 
-                types: {
-                    types.push_front(data_type);
-                    types
-                }
-            });
+        if let Some(Node::DataType(mut types)) = self.try_parse_data_type() {
+            return Some(Node::DataType({
+                types.push_front(data_type);
+                types
+            }));
         }
         None
     }

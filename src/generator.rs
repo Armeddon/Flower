@@ -1,13 +1,34 @@
 use std::collections::VecDeque;
 
-use crate::{node::{Node, Pipe}, token::{DataType, NumLiteral}};
+use crate::{
+    node::{Define, Funcall, Node, Pipe},
+    token::{DataType, NumLiteral}
+};
 
-pub struct Generator {
+pub fn generate(nodes: Vec<Node>) -> String {
+    let mut generator = Generator::new(nodes);
+    let mut result = String::from("#include <stdlib.h>\n");
+    result = format!("{result}#include \"flwrstdlib.h\"\n");
+
+    while let Some(node) = generator.peek(0) {
+        let Some(code) = Generator::codify(&node) else {
+            break;
+        };
+        generator.consume(1);
+        result = format!("{result}{code}");
+    }
+
+    result = format!("{result}{}", Generator::add_main());
+
+    result
+}
+
+struct Generator {
     nodes: VecDeque<Node>
 }
 
 impl Generator {
-    pub fn new(nodes: Vec<Node>) -> Self {
+    fn new(nodes: Vec<Node>) -> Self {
         Self {
             nodes: nodes.try_into().unwrap(),
         }
@@ -27,22 +48,50 @@ impl Generator {
         }
     }
 
-    fn codify(node: Node) -> Option<String> {
-        if let Node::NumLiteral { literal } = node.clone() {
+    fn codify(node: &Node) -> Option<String> {
+        match *node {
+            Node::NumLiteral(_) => Self::try_codify_literal(node),
+            Node::DataType(_) => Self::try_codify_data_type(node),
+            Node::Return(_) => Self::try_codify_return(node),
+            Node::Define(_) => Self::try_codify_define(node),
+            Node::Funcall(_) => Self::try_codify_funcall(node),
+        }
+    }
+
+    fn try_codify_literal(node: &Node) -> Option<String> {
+        if let Node::NumLiteral(literal) = *node {
             return Some(format!("{literal}"));
         }
+        None
+    }
 
-        if let Node::DataType { types } = node.clone() {
+    fn try_codify_data_type(node: &Node) -> Option<String> {
+        if let Node::DataType(types) = node.clone() {
             match types.get(0)? {
                 DataType::Int => return Some("Int".to_string()),
                 DataType::Unit => return Some("Unit".to_string()),
             }
         }
+        None
+    }
 
-        if let Node::Define { func_name, func_type, body } = node.clone() {
-            if let Some(_) = Self::codify(Node::DataType { 
-                types: VecDeque::from([*func_type.last()?])
-            }) {
+    fn try_codify_return(node: &Node) -> Option<String> {
+        if let Node::Return(expr) = node.clone() {
+            if let Some(expr) = Self::codify(expr.as_ref()) {
+                let mut ret = format!("int *_result_value = malloc(sizeof(int));\n");
+                ret = format!("{}*_result_value = {expr};\n", ret);
+                ret = format!("{}_result = var_create(Int, _result_value);\n", ret);
+                return Some(ret);
+            }
+        }
+        None
+    }
+
+    fn try_codify_define(node: &Node) -> Option<String> {
+        if let Node::Define(Define{func_name, func_type, body }) = node.clone() {
+            if Self::codify(
+                &Node::DataType(VecDeque::from([*func_type.last()?]))
+            ).is_some() {
                 let mut function = format!(
                     "static Variable *flwr_{func_name}(Variable **args, VarList *lst) {{\n"
                 );
@@ -61,9 +110,7 @@ impl Generator {
                     function = format!(
                         "{}if (var_get_type(_arg{i}) != {}) {{\n",
                         function, Self::codify(
-                            Node::DataType { 
-                                types: vec![func_type[i]].try_into().unwrap()
-                            })?
+                            &Node::DataType(vec![func_type[i]].try_into().unwrap()))?
                     );
                     function = format!(
                         "{}var_take_delete(&lst, min(var_len(args), {}));\nreturn NULL;\n}}\n",
@@ -71,7 +118,7 @@ impl Generator {
                     );
                 }
                 for stmt in body {
-                    if let Some(code) = Self::codify(stmt) {
+                    if let Some(code) = Self::codify(&stmt) {
                         function = format!("{function}{code}");
                     } else {
                         return None;
@@ -86,17 +133,11 @@ impl Generator {
                 return Some(function);
             }
         }
+        None
+    }
 
-        if let Node::Return { expr } = node.clone() {
-            if let Some(expr) = Self::codify(*expr) {
-                let mut ret = format!("int *_result_value = malloc(sizeof(int));\n");
-                ret = format!("{}*_result_value = {expr};\n", ret);
-                ret = format!("{}_result = var_create(Int, _result_value);\n", ret);
-                return Some(ret);
-            }
-        }
-
-        if let Node::Funcall { this_func_type, func_name, func_type, in_place_params, pipe, pipe_type } = node.clone() {
+    fn try_codify_funcall(node: &Node) -> Option<String> {
+        if let Node::Funcall(Funcall {this_func_type, func_name, func_type, in_place_params, pipe, pipe_type }) = node.clone() {
             let mut func_name = func_name;
             let mut func_type = func_type;
             let mut in_place_params = in_place_params;
@@ -110,7 +151,7 @@ impl Generator {
             loop {
                 funcall = format!("{funcall}{{\n");
                 for i in 0..in_place_params.len() {
-                    let NumLiteral::IntLiteral { value } = in_place_params[i];
+                    let NumLiteral::IntLiteral(value) = in_place_params[i];
                     funcall = format!("{}int *_param{i}_value = malloc(sizeof(int));\n", funcall);
                     funcall = format!("{}*_param{i}_value = {value};\n", funcall);
                     funcall = format!("{}Variable *_param{i} = var_create(Int, _param{i}_value);\n", funcall);
@@ -144,7 +185,7 @@ impl Generator {
                 }
                 funcall = format!("{funcall}}}\n");
                 if let Some(node) = pipe.clone() {
-                    if let Node::Funcall { this_func_type: _, func_name: f_n, func_type: f_t, in_place_params: i_p_p, pipe: p, pipe_type: p_t } = *node {
+                    if let Node::Funcall(Funcall {this_func_type: _, func_name: f_n, func_type: f_t, in_place_params: i_p_p, pipe: p, pipe_type: p_t }) = *node {
                         func_name = f_n;
                         func_type = f_t;
                         in_place_params = i_p_p;
@@ -160,25 +201,7 @@ impl Generator {
             funcall = format!("{funcall}}}\n");
             return Some(funcall);
         }
-
         None
-    }
-
-    pub fn generate(&mut self) -> String {
-        let mut result = String::from("#include <stdlib.h>\n");
-        result = format!("{result}#include \"flwrstdlib.h\"\n");
-        
-        while let Some(node) = self.peek(0) {
-            let Some(code) = Self::codify(node) else {
-                break;
-            };
-            self.consume(1);
-            result = format!("{result}{code}");
-        }
-
-        result = format!("{result}{}", Self::add_main());
-
-        result
     }
 
     fn add_main() -> String {

@@ -5,13 +5,17 @@ use crate::token::{
     NumLiteral, 
 };
 
-pub fn tokenize(source: Vec<u8>) -> Vec<Token> {
+pub fn tokenize(source: Vec<u8>) -> Option<Vec<Token>> {
     let mut lexer = Lexer::new(source);
     let mut tokens = Vec::new();
     while let Some(token) = lexer.tokenize() {
         tokens.push(token);
     }
-    tokens
+    if lexer.source.is_empty() {
+        Some(tokens)
+    } else {
+        None
+    }
 }
 
 struct Lexer {
@@ -25,7 +29,7 @@ impl Lexer {
 
     fn tokenize(&mut self) -> Option<Token> {
         self.consume_whitespace();
-        self.check_if_none()?;
+        self.check_if_some()?;
         if let Some(kw) = self.tokenize_keyword() {
             return Some(kw);
         }
@@ -53,7 +57,7 @@ impl Lexer {
         }
     }
 
-    fn check_if_none(&self) -> Option<()> {
+    fn check_if_some(&self) -> Option<()> {
         self.peek(0)?;
         Some(())
     }
@@ -140,11 +144,7 @@ impl Lexer {
         }
         self.consume(i);
 
-        Some(Token::NumLiteral {
-            literal: NumLiteral::IntLiteral {
-                value: number 
-            }
-        })
+        Some(Token::NumLiteral(NumLiteral::IntLiteral(number)))
     }
 
     fn tokenize_identifier(&mut self) -> Option<Token> {
@@ -165,11 +165,7 @@ impl Lexer {
         }
         self.consume(i);
         
-        Some(
-            Token::Identifier { 
-                name:  unsafe{String::from_utf8_unchecked(identifier)},
-            }
-        )
+        Some(Token::Identifier(String::from_utf8(identifier).unwrap()))
     }
 
     fn peek(&self, n: usize) -> Option<u8> {

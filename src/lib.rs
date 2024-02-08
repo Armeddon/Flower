@@ -14,10 +14,9 @@ mod lexer;
 mod parser;
 mod generator;
 
-use node::Node;
 use lexer::tokenize;
 use parser::parse;
-use generator::Generator;
+use generator::generate;
 
 pub fn read_src() -> Vec<u8> {
     let args: Vec<String> = env::args().collect();
@@ -65,12 +64,7 @@ macro_rules! compile {
 }
 
 pub fn translate(bytes: Vec<u8>) -> String {
-    let tokens = tokenize(bytes);
+    let tokens = tokenize(bytes).expect("Error tokenizing!");
     let nodes = parse(tokens).expect("Error parsing!");
     generate(nodes)
-}
-
-pub fn generate(nodes: Vec<Node>) -> String {
-    let mut generator = Generator::new(nodes);
-    generator.generate()
 }

@@ -7,6 +7,7 @@ use flower::{
     remove_c,
 };
 
+#[cfg(test)]
 mod test;
 
 fn main() {
