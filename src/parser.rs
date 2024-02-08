@@ -195,10 +195,11 @@ impl Parser {
             return Some(vec![data_type]);
         }
         self.consume(1);
-        if let Some(mut types) = self.try_parse_data_type() {
+        if let Some(types) = self.try_parse_data_type() {
             return Some({
-                types.push(data_type);
-                types
+                let mut types_dequeue: VecDeque<_> = types.try_into().unwrap();
+                types_dequeue.push_front(data_type);
+                types_dequeue.into()
             });
         }
         None
