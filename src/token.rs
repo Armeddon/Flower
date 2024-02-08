@@ -106,3 +106,26 @@ impl From<Token> for String {
         }
     }
 }
+
+impl From<DataType> for String {
+    fn from(dt: DataType) -> Self {
+        Token::DataType(dt).into()
+    }
+}
+
+impl DataType {
+    pub fn c_string(&self) -> String {
+        match self {
+            DataType::Unit => "void".to_string(),
+            DataType::Int => "int".to_string(),
+        }
+    }
+}
+
+impl From<NumLiteral> for DataType {
+    fn from(nl: NumLiteral) -> Self {
+        match nl {
+            NumLiteral::IntLiteral(_) => DataType::Int,
+        }
+    }
+}
