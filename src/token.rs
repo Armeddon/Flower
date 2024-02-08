@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Keyword {
     Define,
 }
@@ -9,7 +9,7 @@ pub enum DataType {
     Unit,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum NumLiteral {
     IntLiteral {
         value: i32
@@ -27,7 +27,7 @@ impl std::fmt::Display for NumLiteral {
    } 
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Keyword {
         keyword: Keyword,
