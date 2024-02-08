@@ -6,11 +6,10 @@ use crate::node::{ Node, Pipe };
 pub fn parse(tokens: Vec<Token>) -> Option<Vec<Node>> {
     let mut parser = Parser::new(tokens);
     let mut stmts = Vec::new();
-    while let Some((stmt, tokens)) = parser.try_parse_stmt(0) {
-        parser.consume(tokens);
+    while let Some(stmt) = parser.try_parse_stmt() {
         stmts.push(stmt);
     }
-    if parser.peek(0).is_some() {
+    if !parser.tokens.is_empty() {
         None
     } else {
         Some(stmts)
@@ -51,67 +50,60 @@ impl Parser {
         }
     }
 
-    fn consume(&mut self, n: usize) {
-        for _ in 0..n {
-            self.tokens.pop_front();
-        }
-    }
-
-    fn try_parse_stmt(&mut self, n: usize) -> Option<(Node, usize)> {
-        if let Some(kw) = self.try_parse_keyword(n) {
+    fn try_parse_stmt(&mut self) -> Option<Node> {
+        if let Some(kw) = self.try_parse_keyword() {
             return Some(kw);
         }
-        if let Some(fc) = self.try_parse_funcall(n) {
+        if let Some(fc) = self.try_parse_funcall() {
             return Some(fc);
         }
-        if let Some((expr, tokens)) = self.try_parse_expr(n) {
-            return Some((Node::Return { expr: Box::from(expr) }, tokens));
+        if let Some(expr) = self.try_parse_expr() {
+            return Some(Node::Return { expr: Box::from(expr) });
         }
         None
     }
 
-    fn try_parse_expr(&self, n:usize) -> Option<(Node, usize)> {
-        if let Some(lit) = self.try_parse_literal(n) {
+    fn try_parse_expr(&mut self) -> Option<Node> {
+        if let Some(lit) = self.try_parse_literal() {
             return Some(lit);
         }
         None
     }
 
-    fn try_parse_literal(&self, n: usize) -> Option<(Node, usize)> {
-        if let Some(Token::NumLiteral { literal }) = self.peek(n) {
-            return Some((Node::NumLiteral { literal }, 1));
+    fn try_parse_literal(&mut self) -> Option<Node> {
+        if let Some(Token::NumLiteral { literal }) = self.peek(0) {
+            self.consume(1);
+            return Some(Node::NumLiteral { literal });
         }
         None
     }
 
-    fn try_parse_funcall(&self, n: usize) -> Option<(Node, usize)> {
-        let Token::Identifier { name } = self.peek(n)? else {
+    fn try_parse_funcall(&mut self) -> Option<Node> {
+        let Token::Identifier { name } = self.peek(0)? else {
             return None;
         };
-        let mut cur = n + 1;
+        self.consume(1);
         let mut in_place_params = Vec::new();
-        while let Some(Token::NumLiteral { literal }) = self.peek(cur) {
+        while let Some(Token::NumLiteral { literal }) = self.peek(0) {
             in_place_params.push(literal);
-            cur += 1;
+            self.consume(1);
         }
-        let is_piped = match self.peek(cur) {
-            Some(Token::PipeArrow) | 
-                Some(Token::PrependArrow) | 
-                Some(Token::PreserveArrow) => true,
-            _ => false,
+        let pipe_arrow = match self.peek(0) {
+            Some(Token::PipeArrow) => Some(Token::PipeArrow),
+            Some(Token::PrependArrow) => Some(Token::PrependArrow),
+            Some(Token::PreserveArrow) => Some(Token::PreserveArrow),
+            _ => None,
         };
-        let pipe_funcall = if is_piped { 
-            self.try_parse_funcall(cur + 1)
+        if pipe_arrow.is_some() {
+            self.consume(1);
+        }
+        let pipe_funcall = if pipe_arrow.is_some() { 
+            self.try_parse_funcall()
         } else {None};
-        let pipe = pipe_funcall.clone().map(|node_with_tokens: (Node, usize)| {
-            let (node, _) = node_with_tokens;
+        let pipe = pipe_funcall.map(|node: Node| {
             Box::from(node)
         });
-        let tokens = pipe_funcall.map(|node_with_tokens: (Node, usize)| {
-            let (_, tokens) = node_with_tokens;
-            tokens
-        }).unwrap_or(0);
-        Some((Node::Funcall {
+        Some(Node::Funcall {
             this_func_type: self.this_function.clone(),
             func_name: name.clone(),
             func_type: if let Some(types) = self.functions.get(&name) {
@@ -120,7 +112,7 @@ impl Parser {
             in_place_params,
             pipe,
             pipe_type: {
-                match self.peek(cur) {
+                match pipe_arrow {
                     None => None,
                     Some(token) => match token {
                         Token::PipeArrow => Some(Pipe::Normal),
@@ -130,77 +122,83 @@ impl Parser {
                     }
                 }
             },
-        }, cur - n + tokens + if is_piped {1} else {0}))
+        })
     }
 
-    fn try_parse_keyword(&mut self, n: usize) -> Option<(Node, usize)> {
-        if self.peek(n).is_none() {
+    fn try_parse_keyword(&mut self) -> Option<Node> {
+        if self.peek(0).is_none() {
             return None;
         }
-        let Token::Keyword { keyword } = self.peek(n).unwrap()
+        let Token::Keyword { keyword } = self.peek(0).unwrap()
         else {
             return None;
         };
+        self.consume(1);
         match keyword {
             Keyword::Define => {
-                self.try_parse_define(n)
+                self.try_parse_define()
             },
         }
     }
 
-    fn try_parse_define(&mut self, n: usize) -> Option<(Node, usize)> {
-        let Token::Identifier { name } = self.peek(n + 1)? else {
+    fn try_parse_define(&mut self) -> Option<Node> {
+        let Token::Identifier { name } = self.peek(0)? else {
             return None;
         };
-        if self.peek(n + 2)? != Token::SpecialArrow {
+        self.consume(1);
+        if self.peek(0)? != Token::SpecialArrow {
             return None;
         }
-        let (Node::DataType { types }, type_tokens) = self.try_parse_data_type(n + 3)? else {
+        self.consume(1);
+        let Node::DataType { types } = self.try_parse_data_type()? else {
             return None;
         };
-        if self.peek(n + 3 + type_tokens)? != Token::SpecialArrow {
+        if self.peek(0)? != Token::SpecialArrow {
             return None;
         }
+        self.consume(1);
         let mut stmts = Vec::new();
-        let mut cur = n + 3 + type_tokens + 1;
         self.this_function = types.clone().try_into().unwrap();
         loop {
-            if self.peek(cur)? == Token::EndArrow {
+            if self.peek(0)? == Token::EndArrow {
+                self.consume(1);
                 break;
             }
-            let Some((stmt, tokens)) = self.try_parse_stmt(cur) else {
+            let Some(stmt) = self.try_parse_stmt() else {
                 return None;
             };
             stmts.push(stmt);
-            cur += tokens;
         }
         self.functions.insert(name.clone(), types.clone().try_into().unwrap());
-        return Some((Node::Define {
+        return Some(Node::Define {
             func_name: name,
             func_type: types.try_into().unwrap(),
             body: stmts,
-        }, cur - n + 1));
+        });
     }
 
-    fn try_parse_data_type(&self, n: usize) -> Option<(Node, usize)> { 
-        let Token::DataType { data_type } = self.peek(n)? else
+    fn try_parse_data_type(&mut self) -> Option<Node> { 
+        let Token::DataType { data_type } = self.peek(0)? else
         {
             return None;
         };
 
-        if self.peek(n + 1).is_none() {
-            return Some((Node::DataType { types: VecDeque::from([data_type]) }, 1));
+        self.consume(1);
+
+        if self.peek(0).is_none() {
+            return Some(Node::DataType { types: VecDeque::from([data_type]) });
         }
-        if self.peek(n + 1).unwrap() != Token::TypeArrow {
-            return Some((Node::DataType { types: VecDeque::from([data_type]) }, 1));
+        if self.peek(0).unwrap() != Token::TypeArrow {
+            return Some(Node::DataType { types: VecDeque::from([data_type]) });
         }
-        if let Some((Node::DataType { mut types }, tokens)) = self.try_parse_data_type(n + 2) {
-            return Some((Node::DataType { 
+        self.consume(1);
+        if let Some(Node::DataType { mut types }) = self.try_parse_data_type() {
+            return Some(Node::DataType { 
                 types: {
                     types.push_front(data_type);
                     types
                 }
-            }, tokens + 2));
+            });
         }
         None
     }
@@ -210,6 +208,12 @@ impl Parser {
             None
         } else {
             Some(self.tokens[n].clone())
+        }
+    }
+
+    fn consume(&mut self, n: usize) {
+        for _ in 0..n {
+            self.tokens.pop_front();
         }
     }
 }
