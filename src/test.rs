@@ -49,8 +49,8 @@ macro_rules! run_result {
 #[should_panic(expected = "Error tokenizing!")]
 fn compile_error1() {
     let src = r#"
-        Hello, world!
-        "#.bytes().collect();
+Hello, world!
+"#.bytes().collect();
 
     compiles(src);
 }
@@ -59,8 +59,8 @@ fn compile_error1() {
 #[should_panic(expected = "Error parsing!")]
 fn compile_error2() {
     let src = r#"
-        define define :> () :> ;>
-        "#.bytes().collect();
+define define :> () :> ;>
+"#.bytes().collect();
 
     compiles(src);
 }
@@ -68,9 +68,9 @@ fn compile_error2() {
 #[test]
 fn minimal() {
     let src = r#"
-        define main :>
-        () :>
-            ;>"#.bytes().collect();
+define main :>
+() :>
+;>"#.bytes().collect();
 
     compiles(src);
     assert_eq!(run_result!(), "".as_bytes())
@@ -79,11 +79,11 @@ fn minimal() {
 #[test]
 fn io() {
     let src = r#"
-        define main :>
-        () :>
-            readInt =>
-            println
-            ;>"#.bytes().collect();
+define main :>
+() :>
+    readInt =>
+    println
+;>"#.bytes().collect();
 
     compiles(src);
     assert_eq!(
@@ -96,12 +96,12 @@ fn io() {
 #[test]
 fn preserve() {
     let src = r#"
-        define main :>
-        () :>
-            readInt =>
-            println |>
-            println
-            ;>"#.bytes().collect();
+define main :>
+() :>
+    readInt =>
+    println |>
+    println
+;>"#.bytes().collect();
 
     compiles(src);
     assert_eq!(
@@ -114,14 +114,14 @@ fn preserve() {
 #[test]
 fn prepend() {
     let src = r#"
-        define main :>
-        () :>
-            readInt =>
-            readInt =>
-            readInt =>
-            add +>
-            println
-            ;>"#.bytes().collect();
+define main :>
+() :>
+    readInt =>
+    readInt =>
+    readInt =>
+    add +>
+    println
+;>"#.bytes().collect();
     compiles(src);
     assert_eq!(
         run_result!(4, 2, 3),
@@ -133,17 +133,17 @@ fn prepend() {
 #[test]
 fn functions() {
     let src = r#"
-        define readAndDouble :>
-        Int :>
-        readInt =>
-        id |>
-        add
-        ;>
-        define main :>
-        () :>
-            readAndDouble =>
-            println
-            ;>"#.bytes().collect();
+define readAndDouble :>
+Int :>
+    readInt =>
+    id |>
+    add
+;>
+define main :>
+() :>
+    readAndDouble =>
+    println
+;>"#.bytes().collect();
     compiles(src);
     assert_eq!(
         run_result!(42),
@@ -155,14 +155,14 @@ fn functions() {
 #[test]
 fn constants() {
     let src = r#"
-        define five :> Int :> 5 ;>
-        define main :>
-        () :>
-            readInt =>
-            five =>
-            add =>
-            println
-            ;>"#.bytes().collect();
+define five :> Int :> 5 ;>
+define main :>
+() :>
+    readInt =>
+    five =>
+    add =>
+    println
+;>"#.bytes().collect();
     compiles(src);
     assert_eq!(
         run_result!(42),
@@ -174,12 +174,12 @@ fn constants() {
 #[test]
 fn constant_arguments() {
     let src = r#"
-        define main :>
-        () :>
-            readInt =>
-            add 5 =>
-            println
-            ;>"#.bytes().collect();
+define main :>
+() :>
+    readInt =>
+    add 5 =>
+    println
+;>"#.bytes().collect();
     compiles(src);
     assert_eq!(
         run_result!(42),
@@ -191,18 +191,18 @@ fn constant_arguments() {
 #[test]
 fn arguments() {
     let src = r#"
-        define add3 :>
-        Int -> Int -> Int -> Int :>
-        add +> add
-        ;>
-        define main :>
-        () :>
-            readInt =>
-            readInt =>
-            readInt =>
-            add3 =>
-            println
-            ;>"#.bytes().collect();
+define add3 :>
+Int -> Int -> Int -> Int :>
+    add +> add
+;>
+define main :>
+() :>
+    readInt =>
+    readInt =>
+    readInt =>
+    add3 =>
+    println
+;>"#.bytes().collect();
     compiles(src);
     assert_eq!(
         run_result!(4, 3, 2),
@@ -242,6 +242,28 @@ define main :>
         "Hello, world!\n".as_bytes(),
         "The \"Hello, world!\" program"
         )
+}
+
+#[test]
+fn template() {
+    let src = r#"
+define identity :>
+T :> T -> T :>
+    id
+;>
+define main :>
+() :>
+    readInt =>
+    identity =>
+    println
+;>"#.bytes().collect();
+    compiles(src);
+    assert_eq!(
+        run_result!(5),
+        "5\n".as_bytes(),
+        "Test of the template functions"
+        )
+
 }
 
 fn compiles(src: Vec<u8>) {

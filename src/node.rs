@@ -45,9 +45,9 @@ impl From<&Expr> for DataType {
 }
 
 impl Expr {
-    pub fn c_string(&self) -> String {
+    pub fn c_type_repr(&self) -> String {
         match self.clone() {
-            Expr::Literal(lit) => lit.c_string()
+            Expr::Literal(lit) => lit.c_type_repr()
         }
     }
 }

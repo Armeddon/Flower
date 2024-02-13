@@ -1,8 +1,7 @@
-use std::{collections::VecDeque};
+use std::collections::VecDeque;
 
 use crate::token::{
-    Token, 
-    Literal, 
+    DataType, Keyword, Literal, Token 
 };
 
 pub fn tokenize(source: Vec<u8>) -> Option<Vec<Token>> {
@@ -19,31 +18,33 @@ pub fn tokenize(source: Vec<u8>) -> Option<Vec<Token>> {
 }
 
 struct Lexer {
-    source: VecDeque<u8>
+    source: VecDeque<u8>,
 }
 
 impl Lexer {
     fn new(source: Vec<u8>) -> Self {
-        Self { source: source.try_into().unwrap() }
+        Self { 
+            source: source.try_into().unwrap(),
+        }
     }
 
     fn tokenize(&mut self) -> Option<Token> {
         self.consume_whitespace();
         self.check_if_some()?;
         if let Some(kw) = self.tokenize_keyword() {
-            return Some(kw);
+            return Some(Token::Keyword(kw));
         }
         if let Some(dt) = self.tokenize_datatype() {
-            return Some(dt);
+            return Some(Token::DataType(dt));
         }
         if let Some(arr) = self.tokenize_arrow() {
             return Some(arr);
         }
         if let Some(lit) = self.tokenize_literal() {
-            return Some(lit);
+            return Some(Token::Literal(lit));
         }
         if let Some(ident) = self.tokenize_identifier() {
-            return Some(ident);
+            return Some(Token::Identifier(ident));
         }
         None
     }
@@ -62,49 +63,44 @@ impl Lexer {
         Some(())
     }
 
-    fn tokenize_keyword(&mut self) -> Option<Token> {
+    fn tokenize_keyword(&mut self) -> Option<Keyword> {
         for keyword in Token::keywords() {
-            if self.try_tokenize(&keyword).is_none() {
-                continue
+            if self.try_tokenize(keyword.src_repr().as_str()) {
+                return Some(keyword);
             }
-            return Some(keyword);
         }
         None
     }
 
-    fn tokenize_datatype(&mut self) -> Option<Token> {
+    fn tokenize_datatype(&mut self) -> Option<DataType> {
         for data_type in Token::data_types() {
-            if self.try_tokenize(&data_type).is_none() {
-                continue;
+            if self.try_tokenize(data_type.src_repr().as_str()) {
+                return Some(data_type);
             }
-            return Some(data_type);
         }
         None
     }
 
     fn tokenize_arrow(&mut self) -> Option<Token> {
         for arr in Token::arrows() {
-            if self.try_tokenize(&arr).is_none() {
-                continue;
+            if self.try_tokenize(arr.arrow_src_repr().as_str()) {
+                return Some(arr);
             }
-            return Some(arr);
         }
         None
     }
 
-    fn try_tokenize(&mut self, token: &Token) -> Option<Token> {
-        let token_str: String = token.clone().into();
-
+    fn try_tokenize(&mut self, token_str: &str) -> bool {
         if self.peek(token_str.len()-1).is_none() {
-            return None;
+            return false;
         }
 
         if Self::try_tokenize_helper(&self.source, token_str.as_bytes(), 0) {
             self.consume(token_str.len());
-            return Some(token.clone());
+            return true;
         }
 
-        None
+        false
     }
 
     fn try_tokenize_helper(source: &VecDeque<u8>, word: &[u8], n: usize) -> bool {
@@ -125,7 +121,7 @@ impl Lexer {
         false
     }
 
-    fn tokenize_literal(&mut self) -> Option<Token> {
+    fn tokenize_literal(&mut self) -> Option<Literal> {
         if let Some(lit) = self.tokenize_int_literal() {
             return Some(lit);
         }
@@ -137,7 +133,7 @@ impl Lexer {
         None
     }
 
-    fn tokenize_int_literal(&mut self) -> Option<Token> {
+    fn tokenize_int_literal(&mut self) -> Option<Literal> {
         let mut number = 0;
         let mut i = 0;
 
@@ -156,10 +152,10 @@ impl Lexer {
         }
         self.consume(i);
 
-        Some(Token::Literal(Literal::IntLiteral(number)))
+        Some(Literal::IntLiteral(number))
     }
 
-    fn tokenize_string_literal(&mut self) -> Option<Token> {
+    fn tokenize_string_literal(&mut self) -> Option<Literal> {
         if self.peek(0) != Some(b'"') {
             return None;
         }
@@ -177,10 +173,10 @@ impl Lexer {
         let chars: Vec<char> = (0..i).map(|x: usize|{self.peek(x).unwrap().into()}).collect();
         let s = String::from_iter(chars);
         self.consume(i+1);
-        Some(Token::Literal(Literal::StringLiteral(s)))
+        Some(Literal::StringLiteral(s))
     }
 
-    fn tokenize_identifier(&mut self) -> Option<Token> {
+    fn tokenize_identifier(&mut self) -> Option<String> {
         let mut identifier = Vec::new();
         let mut i = 0;
 
@@ -198,7 +194,7 @@ impl Lexer {
         }
         self.consume(i);
         
-        Some(Token::Identifier(String::from_utf8(identifier).unwrap()))
+        Some(String::from_utf8(identifier).unwrap())
     }
 
     fn peek(&self, n: usize) -> Option<u8> {

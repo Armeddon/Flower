@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use flower::{
     read_src,
     translate,

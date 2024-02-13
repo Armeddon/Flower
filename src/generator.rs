@@ -42,35 +42,12 @@ impl Generator {
     }
 
     fn codify_data_type(data_type: DataType) -> String {
-        data_type.into()
+        data_type.c_repr()
     }
 
     fn try_codify_return(expr: &Expr) -> Option<String> {
         let ret = Self::create_variable(expr, "_result", false);
         Some(ret)
-    }
-
-    fn create_variable(expr: &Expr, name: &str, redefine: bool) -> String {
-        let mut var = String::new();
-        match expr {
-            Expr::Literal(lit) => match lit {
-                    Literal::StringLiteral(str) => {
-                        var = format!("{var}string *{name}_value = new_string({}, (char*)&\"{}\");\n",
-                            str.len()+1,
-                            str.clone(),
-                        );
-                    },
-                    Literal::IntLiteral(val) => {
-                        var = format!("{var}int *{name}_value = malloc(sizeof(int));\n");
-                        var = format!("{var}*{name}_value = {val};\n");
-                    },
-            }
-        }
-        var = format!("{var}{}{name} = var_create({}, {name}_value);\n",
-            if redefine {"Variable *"} else {""},
-            String::from(DataType::from(expr))
-            );
-        var
     }
 
     fn try_codify_define(define: &Define) -> Option<String> {
@@ -92,7 +69,7 @@ impl Generator {
         for i in 0..(func_type.len() - 1) {
             function = format!(
                 "{}if (var_get_type(_arg{i}) != {}) {{\n",
-                function, Self::codify_data_type(func_type[i]));
+                function, Self::codify_data_type(func_type[i].clone()));
             function = format!(
                 "{}var_take_delete(&lst, min(var_len(args), {}));\nreturn NULL;\n}}\n",
                 function, func_type.len()-1
@@ -179,6 +156,29 @@ impl Generator {
         funcall = format!("{}var_delete(_begin_list);\n", funcall);
         funcall = format!("{funcall}}}\n");
         return Some(funcall);
+    }
+
+    fn create_variable(expr: &Expr, name: &str, redefine: bool) -> String {
+        let mut var = String::new();
+        match expr {
+            Expr::Literal(lit) => match lit {
+                Literal::StringLiteral(str) => {
+                    var = format!("{var}string *{name}_value = new_string({}, (char*)&\"{}\");\n",
+                    str.len()+1,
+                    str.clone(),
+                    );
+                },
+                Literal::IntLiteral(val) => {
+                    var = format!("{var}int *{name}_value = malloc(sizeof(int));\n");
+                    var = format!("{var}*{name}_value = {val};\n");
+                },
+            }
+        }
+        var = format!("{var}{}{name} = var_create({}, {name}_value);\n",
+            if redefine {"Variable *"} else {""},
+            expr.c_type_repr()
+            );
+        var
     }
 
     fn add_includes() -> String {

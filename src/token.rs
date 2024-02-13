@@ -3,11 +3,13 @@ pub enum Keyword {
     Define,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum DataType {
     Int,
     Unit,
     String,
+    Template(String)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -50,6 +52,11 @@ impl Keyword {
             Keyword::Define,
         ]
     }
+    pub fn src_repr(&self) -> String {
+        match self {
+            Keyword::Define => "define"
+        }.to_string()
+    }
 }
 
 impl DataType {
@@ -74,79 +81,58 @@ impl Token {
         ]
     }
 
-    pub fn keywords() -> Vec<Token> {
+    pub fn keywords() -> Vec<Keyword> {
         Keyword::keywords()
-            .into_iter()
-            .map(|keyword: Keyword| Token::Keyword (keyword))
-            .collect()
     }
     
-    pub fn data_types() -> Vec<Token> {
+    pub fn data_types() -> Vec<DataType> {
         DataType::data_types()
-            .into_iter()
-            .map(|data_type: DataType| Token::DataType (data_type))
-            .collect()
     }
-}
 
-impl From<Token> for String {
-    fn from(token: Token) -> Self {
-        match token {
-            Token::Keyword (kw) => match kw {
-                Keyword::Define => "define".to_string(),
-            },
-            Token::Literal (lit) => match lit {
-                Literal::IntLiteral(value) => format!("{value}"),
-                Literal::StringLiteral(value) => format!("{value}"),
-            },
-            Token::DataType (dt) => match dt {
-                DataType::Int => "Int".to_string(),
-                DataType::Unit => "()".to_string(),
-                DataType::String => "String".to_owned(),
-            },
-            Token::Identifier (name) => format!("{name}"),
-            Token::SpecialArrow => ":>".to_string(),
-            Token::EndArrow => ";>".to_string(),
-            Token::TypeArrow => "->".to_string(),
-            Token::PipeArrow => "=>".to_string(),
-            Token::PreserveArrow => "|>".to_string(),
-            Token::PrependArrow => "+>".to_string(),
-        }
-    }
-}
-
-impl From<DataType> for String {
-    fn from(dt: DataType) -> Self {
-        match dt {
-            DataType::Unit => "Unit".to_string(),
-            DataType::Int => "Int".to_string(),
-            DataType::String => "String".to_string(),
-        }
+    pub fn arrow_src_repr(&self) -> String {
+        match self {
+            Token::PrependArrow => "+>",
+            Token::TypeArrow => "->",
+            Token::PipeArrow => "=>",
+            Token::SpecialArrow => ":>",
+            Token::EndArrow => ";>",
+            Token::PreserveArrow => "|>",
+            _ => ""
+        }.to_string()
     }
 }
 
 impl DataType {
-    pub fn c_string(&self) -> String {
+    pub fn c_repr(&self) -> String {
         match self {
-            DataType::Unit => "void".to_string(),
-            DataType::Int => "int".to_string(),
-            DataType::String => "string".to_string(),
-        }
+            DataType::Unit => "Unit",
+            DataType::Int => "Int",
+            DataType::String => "String",
+            _ => ""
+        }.to_string()
+    }
+    pub fn src_repr(&self) -> String {
+        match self {
+            DataType::Unit => "()",
+            DataType::Int => "Int",
+            DataType::String => "String",
+            _ => ""
+        }.to_string()
     }
 }
 
 impl Literal {
-    pub fn c_string(&self) -> String {
+    pub fn c_type_repr(&self) -> String {
         match self {
-            Literal::IntLiteral(_) => "int".to_string(),
-            Literal::StringLiteral(_) => "string".to_string(),
-        }
+            Literal::IntLiteral(_) => "Int",
+            Literal::StringLiteral(_) => "String",
+        }.to_string()
     }
 }
 
 impl From<Literal> for DataType {
-    fn from(nl: Literal) -> Self {
-        match nl {
+    fn from(lit: Literal) -> Self {
+        match lit {
             Literal::IntLiteral(_) => DataType::Int,
             Literal::StringLiteral(_) => DataType::String,
         }
