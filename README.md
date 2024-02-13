@@ -1,20 +1,20 @@
 Not yet finished!
 
-define msg :>
-String :>
-&emsp;"Hello, world!"
-;>
+define msg :>  
+String :>  
+&emsp;"Hello, world!"  
+;>  
 
-define helloWorld :>
-() :>
-&emsp;msg =>
-&emsp;println
-;>
+define helloWorld :>  
+() :>  
+&emsp;msg =>  
+&emsp;println  
+;>  
 
-define five :>
-Int :>
-&emsp;5
-;>
+define five :>  
+Int :>  
+&emsp;5  
+;>  
 
 define add3 :>  
 Int -> Int -> Int -> Int :>  
@@ -27,6 +27,6 @@ define main :>
 &emsp;id |>  
 &emsp;id |>  
 &emsp;add3 =>  
-&emsp;add 5 =>
+&emsp;add 5 =>  
 &emsp;println  
 ;>
