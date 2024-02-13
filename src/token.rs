@@ -7,19 +7,24 @@ pub enum Keyword {
 pub enum DataType {
     Int,
     Unit,
+    String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum NumLiteral {
-    IntLiteral (i32),
+#[derive(Debug, Clone, PartialEq)]
+pub enum Literal {
+    IntLiteral(i32),
+    StringLiteral(String),
 }
 
-impl std::fmt::Display for NumLiteral {
+impl std::fmt::Display for Literal {
    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        match self {
-            Self::IntLiteral (value) => {
+            Self::IntLiteral(value) => {
                 f.write_fmt(format_args!("{}", value))?; 
             },
+            Self::StringLiteral(value) => {
+                f.write_fmt(format_args!("\"{}\"", value))?;
+            }
        }
        Ok(())
    } 
@@ -27,13 +32,13 @@ impl std::fmt::Display for NumLiteral {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-    Keyword (Keyword),
-    NumLiteral (NumLiteral),
-    DataType (DataType),
+    Keyword(Keyword),
+    Literal(Literal),
+    DataType(DataType),
     SpecialArrow,
     TypeArrow,
     EndArrow,
-    Identifier (String),
+    Identifier(String),
     PipeArrow,
     PreserveArrow,
     PrependArrow,
@@ -52,6 +57,7 @@ impl DataType {
         vec![
             DataType::Int,
             DataType::Unit,
+            DataType::String,
         ]
     }
 }
@@ -89,12 +95,14 @@ impl From<Token> for String {
             Token::Keyword (kw) => match kw {
                 Keyword::Define => "define".to_string(),
             },
-            Token::NumLiteral (lit) => match lit {
-                NumLiteral::IntLiteral (value) => format!("{value}"),
+            Token::Literal (lit) => match lit {
+                Literal::IntLiteral(value) => format!("{value}"),
+                Literal::StringLiteral(value) => format!("{value}"),
             },
             Token::DataType (dt) => match dt {
                 DataType::Int => "Int".to_string(),
                 DataType::Unit => "()".to_string(),
+                DataType::String => "String".to_owned(),
             },
             Token::Identifier (name) => format!("{name}"),
             Token::SpecialArrow => ":>".to_string(),
@@ -109,7 +117,11 @@ impl From<Token> for String {
 
 impl From<DataType> for String {
     fn from(dt: DataType) -> Self {
-        Token::DataType(dt).into()
+        match dt {
+            DataType::Unit => "Unit".to_string(),
+            DataType::Int => "Int".to_string(),
+            DataType::String => "String".to_string(),
+        }
     }
 }
 
@@ -118,14 +130,25 @@ impl DataType {
         match self {
             DataType::Unit => "void".to_string(),
             DataType::Int => "int".to_string(),
+            DataType::String => "string".to_string(),
         }
     }
 }
 
-impl From<NumLiteral> for DataType {
-    fn from(nl: NumLiteral) -> Self {
+impl Literal {
+    pub fn c_string(&self) -> String {
+        match self {
+            Literal::IntLiteral(_) => "int".to_string(),
+            Literal::StringLiteral(_) => "string".to_string(),
+        }
+    }
+}
+
+impl From<Literal> for DataType {
+    fn from(nl: Literal) -> Self {
         match nl {
-            NumLiteral::IntLiteral(_) => DataType::Int,
+            Literal::IntLiteral(_) => DataType::Int,
+            Literal::StringLiteral(_) => DataType::String,
         }
     }
 }

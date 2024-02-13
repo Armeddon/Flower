@@ -1,10 +1,24 @@
 Not yet finished!
 
-Most complex thing ready for now:
+define msg :>
+String :>
+&emsp;"Hello, world!"
+;>
+
+define helloWorld :>
+() :>
+&emsp;msg =>
+&emsp;println
+;>
+
+define five :>
+Int :>
+&emsp;5
+;>
 
 define add3 :>  
 Int -> Int -> Int -> Int :>  
-&emsp;add +> add  
+&emsp;add => add  
 ;>  
 
 define main :>  
@@ -13,5 +27,6 @@ define main :>
 &emsp;id |>  
 &emsp;id |>  
 &emsp;add3 =>  
+&emsp;add 5 =>
 &emsp;println  
 ;>

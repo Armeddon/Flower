@@ -211,6 +211,39 @@ fn arguments() {
         )
 }
 
+#[test]
+fn string() {
+    let src = r#"
+define main :>
+() :>
+    readInt =>
+    readString =>
+    println
+;>
+"#.bytes().collect();
+    compiles(src);
+    assert_eq!(
+        run_result!(5, "hello"),
+        "hello\n".as_bytes(),
+        "The test for string io for input(5 \"hello\")"
+        )
+}
+
+#[test]
+fn hello_world() {
+    let src = r#"
+define main :>
+() :>
+    println "Hello, world!"
+;>"#.bytes().collect();
+    compiles(src);
+    assert_eq!(
+        run_result!(),
+        "Hello, world!\n".as_bytes(),
+        "The \"Hello, world!\" program"
+        )
+}
+
 fn compiles(src: Vec<u8>) {
     let code = translate(src);
     write_c_code(code).expect("Error writing c code!");

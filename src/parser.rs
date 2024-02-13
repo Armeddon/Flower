@@ -16,27 +16,27 @@ pub fn parse(tokens: Vec<Token>) -> Option<Vec<Node>> {
     }
 }
 
-macro_rules! std_functions {
-    () => {
-        {
-            let mut map = HashMap::new();
-            map.insert("readInt".to_string(), Vec::from([DataType::Int]));
-            map.insert("println".to_string(), Vec::from([
-                DataType::Int,
-                DataType::Unit,
-            ]));
-            map.insert("add".to_string(), Vec::from([
-                DataType::Int,
-                DataType::Int,
-                DataType::Int,
-            ]));
-            map.insert("id".to_string(), Vec::from([
-               DataType::Int,
-               DataType::Int,
-            ]));
-            map
-        }
-    };
+fn std_functions() -> HashMap<String, Vec<DataType>> {
+    let mut map = HashMap::new();
+    map.insert("readInt".to_string(), Vec::from([DataType::Int]));
+    map.insert("readString".to_string(), Vec::from([
+         DataType::Int,
+         DataType::String
+    ]));
+    map.insert("println".to_string(), Vec::from([
+        DataType::Int,
+        DataType::Unit,
+    ]));
+    map.insert("add".to_string(), Vec::from([
+        DataType::Int,
+        DataType::Int,
+        DataType::Int,
+    ]));
+    map.insert("id".to_string(), Vec::from([
+       DataType::Int,
+       DataType::Int,
+    ]));
+    map
 }
 
 struct Parser {
@@ -50,7 +50,7 @@ impl Parser {
         Self { 
             this_function: vec![],
             tokens: tokens.try_into().unwrap(),
-            functions: std_functions!(),
+            functions: std_functions(),
         }
     }
 
@@ -75,9 +75,9 @@ impl Parser {
     }
 
     fn try_parse_literal(&mut self) -> Option<Expr> {
-        if let Some(Token::NumLiteral(literal)) = self.peek(0) {
+        if let Some(Token::Literal(literal)) = self.peek(0) {
             self.consume(1);
-            return Some(Expr::NumLiteral(literal));
+            return Some(Expr::Literal(literal));
         }
         None
     }
@@ -88,7 +88,7 @@ impl Parser {
         };
         self.consume(1);
         let mut in_place_params = Vec::new();
-        while let Some(Token::NumLiteral(literal)) = self.peek(0) {
+        while let Some(Token::Literal(literal)) = self.peek(0) {
             in_place_params.push(literal);
             self.consume(1);
         }

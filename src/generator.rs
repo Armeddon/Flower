@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use crate::{
     node::{Define, Funcall, Expr, Node, Pipe},
-    token::{DataType, NumLiteral}
+    token::{DataType, Literal}
 };
 
 pub fn generate(nodes: Vec<Node>) -> String {
@@ -46,16 +46,31 @@ impl Generator {
     }
 
     fn try_codify_return(expr: &Expr) -> Option<String> {
-        let Some(str_expr) = Self::try_codify_expr(expr) else {
-            return None;
-        };
-        let mut ret = format!("{} *_result_value = malloc(sizeof(int));\n",
-            DataType::from(expr).c_string()
-            );
-        ret = format!("{}*_result_value = {str_expr};\n", ret);
-        ret = format!("{}_result = var_create({}, _result_value);\n",
-            ret, String::from(DataType::from(expr)));
+        let ret = Self::create_variable(expr, "_result", false);
         Some(ret)
+    }
+
+    fn create_variable(expr: &Expr, name: &str, redefine: bool) -> String {
+        let mut var = String::new();
+        match expr {
+            Expr::Literal(lit) => match lit {
+                    Literal::StringLiteral(str) => {
+                        var = format!("{var}string *{name}_value = new_string({}, (char*)&\"{}\");\n",
+                            str.len()+1,
+                            str.clone(),
+                        );
+                    },
+                    Literal::IntLiteral(val) => {
+                        var = format!("{var}int *{name}_value = malloc(sizeof(int));\n");
+                        var = format!("{var}*{name}_value = {val};\n");
+                    },
+            }
+        }
+        var = format!("{var}{}{name} = var_create({}, {name}_value);\n",
+            if redefine {"Variable *"} else {""},
+            String::from(DataType::from(expr))
+            );
+        var
     }
 
     fn try_codify_define(define: &Define) -> Option<String> {
@@ -77,9 +92,7 @@ impl Generator {
         for i in 0..(func_type.len() - 1) {
             function = format!(
                 "{}if (var_get_type(_arg{i}) != {}) {{\n",
-                function, Self::codify_data_type(
-                    func_type[i])
-                );
+                function, Self::codify_data_type(func_type[i]));
             function = format!(
                 "{}var_take_delete(&lst, min(var_len(args), {}));\nreturn NULL;\n}}\n",
                 function, func_type.len()-1
@@ -116,10 +129,12 @@ impl Generator {
         loop {
             funcall = format!("{funcall}{{\n");
             for i in 0..in_place_params.len() {
-                let NumLiteral::IntLiteral(value) = in_place_params[i];
-                funcall = format!("{}int *_param{i}_value = malloc(sizeof(int));\n", funcall);
-                funcall = format!("{}*_param{i}_value = {value};\n", funcall);
-                funcall = format!("{}Variable *_param{i} = var_create(Int, _param{i}_value);\n", funcall);
+                let value = in_place_params[i].clone();
+                funcall = format!("{funcall}{}", Self::create_variable(
+                    &Expr::Literal(value.clone()), 
+                    format!("_param{i}").as_str(),
+                    true
+                    ));
             }
             funcall = format!("{}Variable *_params[] = {{", funcall);
             if !in_place_params.is_empty() {
@@ -167,8 +182,11 @@ impl Generator {
     }
 
     fn add_includes() -> String {
-        let includes = String::from("#include <stdlib.h>\n");
-        format!("{includes}#include \"flwrstdlib.h\"\n")
+        let mut includes = String::from("#include <stdlib.h>\n");
+        includes = format!("{includes}#include <string.h>\n");
+        includes = format!("{includes}#include \"flwrstdlib.h\"\n");
+        includes = format!("{includes}#include \"string.h\"\n");
+        includes
     }
 
     fn add_main() -> String {
@@ -191,14 +209,5 @@ impl Generator {
         for _ in 0..n {
             self.nodes.pop_front();
         }
-    }
-    fn try_codify_expr(expr: &Expr) -> Option<String> { 
-        match *expr {
-            Expr::NumLiteral(lit) => Some(Self::codify_literal(lit)),
-        }
-    }
-
-    fn codify_literal(literal: NumLiteral) -> String {
-        format!("{literal}")
     }
 }

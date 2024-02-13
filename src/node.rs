@@ -1,4 +1,4 @@
-use crate::token::{NumLiteral, DataType };
+use crate::token::{Literal, DataType };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Pipe {
@@ -18,7 +18,7 @@ pub struct Define {
 pub struct Funcall {
     pub func_name: String,
     pub func_type: Vec<DataType>,
-    pub in_place_params: Vec<NumLiteral>,
+    pub in_place_params: Vec<Literal>,
     pub pipe: Option<Box<Funcall>>,
     pub pipe_type: Option<Pipe>,
     pub this_func_type: Vec<DataType>,
@@ -26,7 +26,7 @@ pub struct Funcall {
 
 #[derive(Debug, Clone)]
 pub enum Expr {
-    NumLiteral(NumLiteral),
+    Literal(Literal),
 }
 
 #[derive(Debug, Clone)]
@@ -38,8 +38,16 @@ pub enum Node {
 
 impl From<&Expr> for DataType {
     fn from(expr: &Expr) -> Self {
-        match *expr {
-            Expr::NumLiteral(lit) => lit.into(),
+        match expr.clone() {
+            Expr::Literal(lit) => lit.clone().into(),
+        }
+    }
+}
+
+impl Expr {
+    pub fn c_string(&self) -> String {
+        match self.clone() {
+            Expr::Literal(lit) => lit.c_string()
         }
     }
 }

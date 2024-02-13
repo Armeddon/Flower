@@ -1,8 +1,8 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque};
 
 use crate::token::{
     Token, 
-    NumLiteral, 
+    Literal, 
 };
 
 pub fn tokenize(source: Vec<u8>) -> Option<Vec<Token>> {
@@ -126,6 +126,18 @@ impl Lexer {
     }
 
     fn tokenize_literal(&mut self) -> Option<Token> {
+        if let Some(lit) = self.tokenize_int_literal() {
+            return Some(lit);
+        }
+    
+        if let Some(lit) = self.tokenize_string_literal() {
+            return Some(lit);
+        }
+
+        None
+    }
+
+    fn tokenize_int_literal(&mut self) -> Option<Token> {
         let mut number = 0;
         let mut i = 0;
 
@@ -144,7 +156,28 @@ impl Lexer {
         }
         self.consume(i);
 
-        Some(Token::NumLiteral(NumLiteral::IntLiteral(number)))
+        Some(Token::Literal(Literal::IntLiteral(number)))
+    }
+
+    fn tokenize_string_literal(&mut self) -> Option<Token> {
+        if self.peek(0) != Some(b'"') {
+            return None;
+        }
+        self.consume(1);
+        let mut i = 0;
+        while let Some(byte) = self.peek(i) {
+            if byte == b'"' {
+                break;
+            }
+            i += 1;
+        }
+        if self.peek(i).is_none() {
+            return None;
+        }
+        let chars: Vec<char> = (0..i).map(|x: usize|{self.peek(x).unwrap().into()}).collect();
+        let s = String::from_iter(chars);
+        self.consume(i+1);
+        Some(Token::Literal(Literal::StringLiteral(s)))
     }
 
     fn tokenize_identifier(&mut self) -> Option<Token> {

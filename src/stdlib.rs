@@ -6,6 +6,8 @@ extern Variable *flwr_id(Variable **args, VarList *lst);
 
 extern Variable *flwr_readInt(Variable **args, VarList *lst);
 
+extern Variable *flwr_readString(Variable **args, VarList *lst);
+
 extern Variable *flwr_println(Variable **args, VarList *lst);
 
 extern Variable *flwr_add(Variable **args, VarList *lst);
@@ -13,6 +15,7 @@ extern Variable *flwr_add(Variable **args, VarList *lst);
 pub const STDLIB_C: &[u8] = r#"#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "flwrstdlib.h"
 #include "varlist.c"
@@ -36,6 +39,26 @@ Variable *flwr_readInt(Variable **args, VarList *lst) {
     return var;
 }
 
+Variable *flwr_readString(Variable **args, VarList *lst) {
+    var_take_pextend(&lst, args, min(var_len(args), 1));
+    Variable *_arg0 = var_get(lst, 0);
+    if (var_get_type(_arg0) != Int) {
+        return NULL;
+    }
+    int limit = *(int*)_arg0->value;
+    char *input = malloc(limit + 1);
+    scanf("%s", input);
+    Variable *var = malloc(sizeof(Variable));
+    var->value = malloc(sizeof(string));
+    *(string*)var->value = (string) {
+        .len = strlen(input),
+        .str = input
+    };
+    var->type = String;
+    var_take_delete(&lst, min(var_len(args), 1));
+    return var;
+}
+
 Variable *flwr_println(Variable **args, VarList *lst) {
     var_take_pextend(&lst, args, min(var_len(args), 1));
     Variable *_arg0 = var_get(lst, 0);
@@ -43,6 +66,9 @@ Variable *flwr_println(Variable **args, VarList *lst) {
     switch (_arg0->type) {
         case Int:
             printf("%d\n", *(int*)_arg0->value);
+            break;
+        case String:
+            printf("%s\n", ((string*)_arg0->value)->str);
             break;
         default:
             break;
@@ -78,6 +104,7 @@ enum Type {
     Undefined,
     Int,
     Unit,
+    String,
 };
 
 struct Variable;
@@ -117,6 +144,7 @@ extern int var_len(Variable **args);
 pub const VARLIST_C: &[u8] = r#"#include <stdlib.h>
 #include <string.h>
 #include "varlist.h"
+#include "string.c"
 
 size_t type_size(enum Type type) {
     switch (type) {
@@ -124,6 +152,8 @@ size_t type_size(enum Type type) {
             return sizeof(int);
         case Unit:
         case Undefined:
+        case String:
+            return sizeof(string);
         default:
             return 0;
     }
@@ -217,12 +247,32 @@ void var_take_delete(VarList **list, int n) {
     var_take_delete(list, n - 1);
 }
 
+void *var_value_cpy(void *src, enum Type tp) {
+    switch (tp) {
+        case String: {
+             char *str = ((string*)src)->str;
+             string *res = malloc(sizeof(string));
+             res->str = malloc(strlen(str));
+             strcpy(res->str, str);
+             return res;
+         }
+        case Unit:
+        case Undefined:
+             return NULL;
+        case Int:
+        default: {
+             void *dest = malloc(type_size(tp));
+             memcpy(dest, src, type_size(tp));
+             return dest;
+        }
+    }
+}
+
 Variable *var_cpy(Variable *var) {
     if (!var) return NULL;
     Variable *cpy = malloc(sizeof(Variable));
     cpy->type = var->type;
-    cpy->value = malloc(type_size(cpy->type));
-    memcpy(cpy->value, var->value, type_size(cpy->type));
+    cpy->value = var_value_cpy(var->value, var->type);
     return cpy;
 }
 
@@ -249,5 +299,35 @@ void var_take_pextend(VarList **lst, Variable **args, int n) {
     for (int i = 0; i < n; i++) {
         var_prepend(lst, args[i]);
     }
+}
+"#.as_bytes();
+pub const STRING_H: &[u8] = r#"struct string;
+
+typedef struct string string;
+
+extern string *new_string(int len, char *str);
+
+extern void delete_string(string *str);
+"#.as_bytes();
+pub const STRING_C: &[u8] = r#"#include <stdlib.h>
+#include <string.h>
+#include "string.h"
+
+struct string {
+    int len;
+    char *str;
+};
+
+string *new_string(int len, char* str) {
+    string *res = malloc(sizeof(string));
+    res->len = len;
+    res->str = malloc(len);
+    strncpy(res->str, str, len);
+    return res;
+}
+
+void delete_string(string *str) {
+    free(str->str);
+    free(str);
 }
 "#.as_bytes();

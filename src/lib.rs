@@ -31,6 +31,8 @@ pub fn load_stdlib() -> io::Result<()> {
     fs::write("flwrstdlib.c", stdlib::STDLIB_C)?;
     fs::write("varlist.h", stdlib::VARLIST_H)?;
     fs::write("varlist.c", stdlib::VARLIST_C)?;
+    fs::write("string.h", stdlib::STRING_H)?;
+    fs::write("string.c", stdlib::STRING_C)?;
     Ok(())
 }
 
@@ -44,6 +46,8 @@ pub fn remove_c() -> io::Result<()>{
     fs::remove_file("flwrstdlib.c")?;
     fs::remove_file("varlist.h")?;
     fs::remove_file("varlist.c")?;
+    fs::remove_file("string.h")?;
+    fs::remove_file("string.c")?;
     fs::remove_file("main.c")?;
     Ok(())
 }

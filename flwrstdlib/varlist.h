@@ -4,6 +4,7 @@ enum Type {
     Undefined,
     Int,
     Unit,
+    String,
 };
 
 struct Variable;

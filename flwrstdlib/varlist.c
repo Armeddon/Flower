@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "varlist.h"
+#include "string.c"
 
 size_t type_size(enum Type type) {
     switch (type) {
@@ -8,6 +9,8 @@ size_t type_size(enum Type type) {
             return sizeof(int);
         case Unit:
         case Undefined:
+        case String:
+            return sizeof(string);
         default:
             return 0;
     }
@@ -101,12 +104,32 @@ void var_take_delete(VarList **list, int n) {
     var_take_delete(list, n - 1);
 }
 
+void *var_value_cpy(void *src, enum Type tp) {
+    switch (tp) {
+        case String: {
+             char *str = ((string*)src)->str;
+             string *res = malloc(sizeof(string));
+             res->str = malloc(strlen(str));
+             strcpy(res->str, str);
+             return res;
+         }
+        case Unit:
+        case Undefined:
+             return NULL;
+        case Int:
+        default: {
+             void *dest = malloc(type_size(tp));
+             memcpy(dest, src, type_size(tp));
+             return dest;
+        }
+    }
+}
+
 Variable *var_cpy(Variable *var) {
     if (!var) return NULL;
     Variable *cpy = malloc(sizeof(Variable));
     cpy->type = var->type;
-    cpy->value = malloc(type_size(cpy->type));
-    memcpy(cpy->value, var->value, type_size(cpy->type));
+    cpy->value = var_value_cpy(var->value, var->type);
     return cpy;
 }
 
