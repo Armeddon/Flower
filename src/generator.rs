@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 use crate::{
     node::{Define, Funcall, Expr, Node, Pipe},
@@ -53,20 +53,45 @@ impl Generator {
     fn try_codify_define(define: &Define) -> Option<String> {
         let Define{func_name, func_type, body } = define.clone();
         let mut function = format!(
-            "static Variable *flwr_{func_name}(Variable **args, VarList *lst) {{\n"
-            );
+            "static Variable *flwr_{func_name}(Variable **args, VarList *lst) {{\n");
         function = format!(
             "{}var_take_pextend(&lst, args, min(var_len(args), {}));\n",
-            function, func_type.len()-1
-            );
-        function = format!("{}Variable *_result = NULL;\n", function);
+            function, func_type.len()-1);
         for i in 0..(func_type.len() - 1) {
             function = format!(
                 "{}Variable *_arg{i} = var_get(lst, {i});\n",
                 function
                 );
         }
+        let mut templ_idxs = HashMap::new();
         for i in 0..(func_type.len() - 1) {
+            if let DataType::Template(name) = func_type[i].clone() {
+                if templ_idxs.get(&name).is_none() {
+                    let _ = templ_idxs.insert(name, i);
+                }
+            }
+        }
+        if let DataType::Template(name) = func_type.last().unwrap().clone() {
+            function = format!(
+                "{}Variable *_result = var_create(var_get_type(_arg{}), 0);\n",
+                function, templ_idxs.get(&name)
+                .expect("Undefined template function argument"));
+        } else {
+            function = format!(
+                "{}Variable *_result = var_create({}, 0);\n",
+                function, Self::codify_data_type(func_type.last().unwrap().clone())
+                );
+        }
+        for i in 0..(func_type.len() - 1) {
+            if let DataType::Template(name) = func_type[i].clone() {
+                if i == *templ_idxs.get(&name).unwrap() {
+                    continue;
+                }
+                function = format!(
+                    "{}if (var_get_type(_arg{i}) != var_get_type(_arg{}))",
+                    function, *templ_idxs.get(&name).unwrap());
+                continue;
+            }
             function = format!(
                 "{}if (var_get_type(_arg{i}) != {}) {{\n",
                 function, Self::codify_data_type(func_type[i].clone()));
@@ -86,6 +111,9 @@ impl Generator {
             "{}var_take_delete(&lst, min(var_len(args), {}));\n",
             function, func_type.len()-1
             );
+        function = format!(
+            "{}if (var_null(_result)) {{\nvar_free(_result);\n_result = 0;\n}}\n",
+            function);
         function = format!("{}return _result;\n", function);
         function = format!("{}}}\n", function);
         Some(function)

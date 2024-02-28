@@ -40,3 +40,5 @@ extern void var_take_pextend(VarList **list, Variable **args, int n);
 extern void var_free(Variable *var);
 
 extern int var_len(Variable **args);
+
+extern int var_null(Variable *var);

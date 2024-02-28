@@ -43,7 +43,7 @@ impl Lexer {
         if let Some(lit) = self.tokenize_literal() {
             return Some(Token::Literal(lit));
         }
-        if let Some(ident) = self.tokenize_identifier() {
+        if let Some(ident) = self.tokenize_identifier(false) {
             return Some(Token::Identifier(ident));
         }
         None
@@ -77,6 +77,9 @@ impl Lexer {
             if self.try_tokenize(data_type.src_repr().as_str()) {
                 return Some(data_type);
             }
+        }
+        if let Some(ident) = self.tokenize_identifier(true) {
+            return Some(DataType::Template(ident));
         }
         None
     }
@@ -176,12 +179,18 @@ impl Lexer {
         Some(Literal::StringLiteral(s))
     }
 
-    fn tokenize_identifier(&mut self) -> Option<String> {
+    fn tokenize_identifier(&mut self, cap_fst: bool) -> Option<String> {
         let mut identifier = Vec::new();
         let mut i = 0;
 
         if let Some(byte) = self.peek(i) {
             if !byte.is_ascii_alphabetic() {
+                return None;
+            }
+            if cap_fst && byte.is_ascii_lowercase() {
+                return None;
+            }
+            if !cap_fst && byte.is_ascii_uppercase() {
                 return None;
             }
         }

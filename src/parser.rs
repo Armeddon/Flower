@@ -24,7 +24,7 @@ fn std_functions() -> HashMap<String, Vec<DataType>> {
          DataType::String
     ]));
     map.insert("println".to_string(), Vec::from([
-        DataType::Int,
+        DataType::Template("T".to_string()),
         DataType::Unit,
     ]));
     map.insert("add".to_string(), Vec::from([
@@ -33,8 +33,8 @@ fn std_functions() -> HashMap<String, Vec<DataType>> {
         DataType::Int,
     ]));
     map.insert("id".to_string(), Vec::from([
-       DataType::Int,
-       DataType::Int,
+       DataType::Template("T".to_string()),
+       DataType::Template("T".to_string()),
     ]));
     map
 }

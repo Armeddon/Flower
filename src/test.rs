@@ -47,7 +47,7 @@ macro_rules! run_result {
 
 #[test]
 #[should_panic(expected = "Error tokenizing!")]
-fn compile_error1() {
+fn tokenize_error() {
     let src = r#"
 Hello, world!
 "#.bytes().collect();
@@ -57,7 +57,7 @@ Hello, world!
 
 #[test]
 #[should_panic(expected = "Error parsing!")]
-fn compile_error2() {
+fn parse_error() {
     let src = r#"
 define define :> () :> ;>
 "#.bytes().collect();
@@ -248,7 +248,7 @@ define main :>
 fn template() {
     let src = r#"
 define identity :>
-T :> T -> T :>
+T -> T :>
     id
 ;>
 define main :>

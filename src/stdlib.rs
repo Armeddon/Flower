@@ -140,6 +140,8 @@ extern void var_take_pextend(VarList **list, Variable **args, int n);
 extern void var_free(Variable *var);
 
 extern int var_len(Variable **args);
+
+extern int var_null(Variable *var);
 "#.as_bytes();
 pub const VARLIST_C: &[u8] = r#"#include <stdlib.h>
 #include <string.h>
@@ -214,6 +216,7 @@ void var_enqueue(VarList **begin_list, Variable *var) {
  }
 
 void var_free(Variable *var) {
+    if (!var) return;
     free(var->value);
     free(var);
 }
@@ -299,6 +302,10 @@ void var_take_pextend(VarList **lst, Variable **args, int n) {
     for (int i = 0; i < n; i++) {
         var_prepend(lst, args[i]);
     }
+}
+
+int var_null(Variable *var) {
+    return !var || !var->value;
 }
 "#.as_bytes();
 pub const STRING_H: &[u8] = r#"struct string;
