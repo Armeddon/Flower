@@ -183,7 +183,7 @@ impl Generator {
         funcall = format!("{}_result = var_cpy(var_get(_begin_list, 0));\n", funcall);
         funcall = format!("{}var_delete(_begin_list);\n", funcall);
         funcall = format!("{funcall}}}\n");
-        return Some(funcall);
+        Some(funcall)
     }
 
     fn create_variable(expr: &Expr, name: &str, redefine: bool) -> String {
@@ -191,14 +191,18 @@ impl Generator {
         match expr {
             Expr::Literal(lit) => match lit {
                 Literal::StringLiteral(str) => {
-                    var = format!("{var}string *{name}_value = new_string({}, (char*)&\"{}\");\n",
-                    str.len()+1,
+                    var = format!("{var}string *{name}_value = string_new({}, (char*)&\"{}\");\n",
+                    str.len(),
                     str.clone(),
                     );
                 },
                 Literal::IntLiteral(val) => {
                     var = format!("{var}int *{name}_value = malloc(sizeof(int));\n");
                     var = format!("{var}*{name}_value = {val};\n");
+                },
+                Literal::BoolLiteral(val) => {
+                    var = format!("{var}_Bool *{name}_value = malloc(sizeof(_Bool));\n");
+                    var = format!("{var}*{name}_value = {}", if val.clone() {1} else {0});
                 },
             }
         }

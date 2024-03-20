@@ -11,6 +11,8 @@ extern Variable *flwr_readString(Variable **args, VarList *lst);
 extern Variable *flwr_println(Variable **args, VarList *lst);
 
 extern Variable *flwr_add(Variable **args, VarList *lst);
+
+extern Variable *flwr_eq(Variable **args, VarList *lst);
 "#.as_bytes();
 pub const STDLIB_C: &[u8] = r#"#include <stddef.h>
 #include <stdio.h>
@@ -49,11 +51,9 @@ Variable *flwr_readString(Variable **args, VarList *lst) {
     char *input = malloc(limit + 1);
     scanf("%s", input);
     Variable *var = malloc(sizeof(Variable));
-    var->value = malloc(sizeof(string));
-    *(string*)var->value = (string) {
-        .len = strlen(input),
-        .str = input
-    };
+    var->value = malloc(sizeof(string)+strlen(input));
+    ((string*)var->value)->len  = strlen(input);
+    strcpy(((string*)var->value)->str, input);
     var->type = String;
     var_take_delete(&lst, min(var_len(args), 1));
     return var;
@@ -69,6 +69,12 @@ Variable *flwr_println(Variable **args, VarList *lst) {
             break;
         case String:
             printf("%s\n", ((string*)_arg0->value)->str);
+            break;
+        case Bool:
+            if (*(_Bool*)_arg0->value)
+                printf("True\n");
+            else
+                printf("False\n");
             break;
         default:
             break;
@@ -97,6 +103,36 @@ Variable *flwr_add(Variable **args, VarList *lst) {
     var_take_delete(&lst, min(var_len(args), 2));
     return sum;
 }
+
+Variable *flwr_eq(Variable **args, VarList *lst) {
+    var_take_pextend(&lst, args, min(var_len(args), 2));
+    Variable *_arg0 = var_get(lst, 0);
+    Variable *_arg1 = var_get(lst, 1);
+    if (var_get_type(_arg0) != var_get_type(_arg1)) {
+        var_delete(lst);
+        return NULL;
+    }
+    Variable *eq = malloc(sizeof(Variable));
+    eq->type = Bool;
+    eq->value = malloc(sizeof(_Bool));
+    switch (var_get_type(_arg0)) {
+        case Int:
+            *(_Bool*)eq->value = *(int*)_arg0->value == *(int*)_arg1->value;
+            break;
+        case String:
+            *(_Bool*)eq->value = string_eq((string*)_arg0->value, (string*)_arg1->value);
+            break;
+        case Bool:
+            *(_Bool*)eq->value = (char)*(_Bool*)_arg0->value == (char)*(_Bool*)_arg1->value;
+            break;
+        case Undefined:
+        case Unit:
+        default:
+            *(_Bool*)eq->value = 1;
+    }
+    var_take_delete(&lst, min(var_len(args), 2));
+    return eq;
+}
 "#.as_bytes();
 pub const VARLIST_H: &[u8] = r#"#pragma once
 
@@ -105,6 +141,7 @@ enum Type {
     Int,
     Unit,
     String,
+    Bool,
 };
 
 struct Variable;
@@ -152,10 +189,12 @@ size_t type_size(enum Type type) {
     switch (type) {
         case Int:
             return sizeof(int);
-        case Unit:
-        case Undefined:
         case String:
             return sizeof(string);
+        case Bool:
+            return sizeof(_Bool);
+        case Unit:
+        case Undefined:
         default:
             return 0;
     }
@@ -254,15 +293,17 @@ void *var_value_cpy(void *src, enum Type tp) {
     switch (tp) {
         case String: {
              char *str = ((string*)src)->str;
-             string *res = malloc(sizeof(string));
-             res->str = malloc(strlen(str));
-             strcpy(res->str, str);
+             int len = strlen(str);
+             string *res = malloc(sizeof(string) + len);
+             res->len = len;
+             strncpy(res->str, str, len);
              return res;
          }
         case Unit:
         case Undefined:
              return NULL;
         case Int:
+        case Bool:
         default: {
              void *dest = malloc(type_size(tp));
              memcpy(dest, src, type_size(tp));
@@ -308,13 +349,17 @@ int var_null(Variable *var) {
     return !var || !var->value;
 }
 "#.as_bytes();
-pub const STRING_H: &[u8] = r#"struct string;
+pub const STRING_H: &[u8] = r#"#include "stdbool.h"
+
+struct string;
 
 typedef struct string string;
 
-extern string *new_string(int len, char *str);
+extern string *string_new(int len, char *str);
 
-extern void delete_string(string *str);
+extern void string_delete(string *str);
+
+extern _Bool string_eq(string *s1, string *s2);
 "#.as_bytes();
 pub const STRING_C: &[u8] = r#"#include <stdlib.h>
 #include <string.h>
@@ -322,19 +367,30 @@ pub const STRING_C: &[u8] = r#"#include <stdlib.h>
 
 struct string {
     int len;
-    char *str;
+    char str[];
 };
 
-string *new_string(int len, char* str) {
-    string *res = malloc(sizeof(string));
+string *string_new(int len, char* str) {
+    string *res = malloc(sizeof(string)+len);
     res->len = len;
-    res->str = malloc(len);
     strncpy(res->str, str, len);
     return res;
 }
 
-void delete_string(string *str) {
-    free(str->str);
+void string_delete(string *str) {
     free(str);
+}
+
+_Bool string_eq(string *s1, string *s2) {
+    if (!s1 && !s2)
+        return 1;
+    if (!s1 || !s2)
+        return 0;
+    if (s1->len != s2->len)
+        return 0;
+    for (int i = 0; i < s1->len; i++)
+        if (s1->str[i] != s2->str[i])
+            return 0;
+    return 1;
 }
 "#.as_bytes();

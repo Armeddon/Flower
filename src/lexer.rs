@@ -133,6 +133,10 @@ impl Lexer {
             return Some(lit);
         }
 
+        if let Some(lit) = self.tokenize_bool_literal() {
+            return Some(lit);
+        }
+
         None
     }
 
@@ -177,6 +181,18 @@ impl Lexer {
         let s = String::from_iter(chars);
         self.consume(i+1);
         Some(Literal::StringLiteral(s))
+    }
+
+    fn tokenize_bool_literal(&mut self) -> Option<Literal> {
+        if self.try_tokenize("true") {
+            return Some(Literal::BoolLiteral(true));
+        }
+
+        if self.try_tokenize("false") {
+            return Some(Literal::BoolLiteral(false));
+        }
+
+        None
     }
 
     fn tokenize_identifier(&mut self, cap_fst: bool) -> Option<String> {

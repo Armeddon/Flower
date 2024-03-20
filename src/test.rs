@@ -266,6 +266,26 @@ define main :>
 
 }
 
+#[test]
+fn equality() {
+    let src = r#"
+define main :>
+() :>
+    eq 1 1 =>
+    println
+    eq "Hello" "Hello" =>
+    println
+    eq 2 0 =>
+    println
+;>"#.bytes().collect();
+    compiles(src);
+    assert_eq!(
+        run_result!(),
+        "True\nTrue\nFalse\n".as_bytes(),
+        "Test of the equality function"
+        )
+}
+
 fn compiles(src: Vec<u8>) {
     let code = translate(src);
     write_c_code(code).expect("Error writing c code!");

@@ -36,6 +36,11 @@ fn std_functions() -> HashMap<String, Vec<DataType>> {
        DataType::Template("T".to_string()),
        DataType::Template("T".to_string()),
     ]));
+    map.insert("eq".to_string(), Vec::from([
+        DataType::Template("T".to_string()),
+        DataType::Template("T".to_string()),
+        DataType::Bool,
+    ]));
     map
 }
 
@@ -173,11 +178,11 @@ impl Parser {
             stmts.push(stmt);
         }
         self.functions.insert(name.clone(), types.clone().try_into().unwrap());
-        return Some(Define{
+        Some(Define{
             func_name: name,
             func_type: types.try_into().unwrap(),
             body: stmts,
-        });
+        })
     }
 
     fn try_parse_data_type(&mut self) -> Option<Vec<DataType>> { 

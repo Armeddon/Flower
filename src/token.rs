@@ -9,6 +9,7 @@ pub enum DataType {
     Int,
     Unit,
     String,
+    Bool,
     Template(String)
 }
 
@@ -16,6 +17,7 @@ pub enum DataType {
 pub enum Literal {
     IntLiteral(i32),
     StringLiteral(String),
+    BoolLiteral(bool),
 }
 
 impl std::fmt::Display for Literal {
@@ -26,6 +28,9 @@ impl std::fmt::Display for Literal {
             },
             Self::StringLiteral(value) => {
                 f.write_fmt(format_args!("\"{}\"", value))?;
+            },
+            Self::BoolLiteral(value) => {
+                f.write_fmt(format_args!("{}", value))?;
             }
        }
        Ok(())
@@ -108,6 +113,7 @@ impl DataType {
             DataType::Unit => "Unit",
             DataType::Int => "Int",
             DataType::String => "String",
+            DataType::Bool => "Bool",
             _ => ""
         }.to_string()
     }
@@ -116,6 +122,7 @@ impl DataType {
             DataType::Unit => "()",
             DataType::Int => "Int",
             DataType::String => "String",
+            DataType::Bool => "Bool",
             _ => ""
         }.to_string()
     }
@@ -126,6 +133,7 @@ impl Literal {
         match self {
             Literal::IntLiteral(_) => "Int",
             Literal::StringLiteral(_) => "String",
+            Literal::BoolLiteral(_) => "Bool",
         }.to_string()
     }
 }
@@ -135,6 +143,7 @@ impl From<Literal> for DataType {
         match lit {
             Literal::IntLiteral(_) => DataType::Int,
             Literal::StringLiteral(_) => DataType::String,
+            Literal::BoolLiteral(_) => DataType::Bool,
         }
     }
 }

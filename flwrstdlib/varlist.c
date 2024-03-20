@@ -7,10 +7,12 @@ size_t type_size(enum Type type) {
     switch (type) {
         case Int:
             return sizeof(int);
-        case Unit:
-        case Undefined:
         case String:
             return sizeof(string);
+        case Bool:
+            return sizeof(_Bool);
+        case Unit:
+        case Undefined:
         default:
             return 0;
     }
@@ -109,15 +111,17 @@ void *var_value_cpy(void *src, enum Type tp) {
     switch (tp) {
         case String: {
              char *str = ((string*)src)->str;
-             string *res = malloc(sizeof(string));
-             res->str = malloc(strlen(str));
-             strcpy(res->str, str);
+             int len = strlen(str);
+             string *res = malloc(sizeof(string) + len);
+             res->len = len;
+             strncpy(res->str, str, len);
              return res;
          }
         case Unit:
         case Undefined:
              return NULL;
         case Int:
+        case Bool:
         default: {
              void *dest = malloc(type_size(tp));
              memcpy(dest, src, type_size(tp));

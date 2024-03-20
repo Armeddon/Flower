@@ -5,6 +5,7 @@ enum Type {
     Int,
     Unit,
     String,
+    Bool,
 };
 
 struct Variable;

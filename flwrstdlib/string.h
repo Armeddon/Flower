@@ -1,7 +1,11 @@
+#include "stdbool.h"
+
 struct string;
 
 typedef struct string string;
 
-extern string *new_string(int len, char *str);
+extern string *string_new(int len, char *str);
 
-extern void delete_string(string *str);
+extern void string_delete(string *str);
+
+extern _Bool string_eq(string *s1, string *s2);
