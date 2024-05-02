@@ -1,7 +1,7 @@
 use std::collections::{VecDeque, HashMap};
 
 use crate::token::{ Token, Keyword, DataType };
-use crate::node::{ Define, Funcall, Expr, Node, Pipe };
+use crate::node::{ Define, If, Funcall, Return, Expr, Node, Pipe };
 
 pub fn parse(tokens: Vec<Token>) -> Option<Vec<Node>> {
     let mut parser = Parser::new(tokens);
@@ -36,9 +36,18 @@ fn std_functions() -> HashMap<String, Vec<DataType>> {
        DataType::Template("T".to_string()),
        DataType::Template("T".to_string()),
     ]));
-    map.insert("eq".to_string(), Vec::from([
+    map.insert("lt".to_string(), Vec::from([
         DataType::Template("T".to_string()),
         DataType::Template("T".to_string()),
+        DataType::Bool,
+    ]));
+    map.insert("and".to_string(), Vec::from([
+        DataType::Bool,
+        DataType::Bool,
+        DataType::Bool,
+    ]));
+    map.insert("not".to_string(), Vec::from([
+        DataType::Bool,
         DataType::Bool,
     ]));
     map
@@ -54,7 +63,7 @@ impl Parser {
     fn new(tokens: Vec<Token>) -> Self {
         Self { 
             this_function: vec![],
-            tokens: tokens.try_into().unwrap(),
+            tokens: tokens.into(),
             functions: std_functions(),
         }
     }
@@ -67,7 +76,10 @@ impl Parser {
             return Some(Node::Funcall(fc));
         }
         if let Some(expr) = self.try_parse_expr() {
-            return Some(Node::Return(Box::from(expr)));
+            return Some(Node::Return(Return {
+                expr: Box::from(expr),
+                return_type: self.this_function.last().map(|x|x.clone()),
+            } ));
         }
         None
     }
@@ -107,10 +119,15 @@ impl Parser {
             self.consume(1);
         }
         let pipe_funcall = if pipe_arrow.is_some() { 
-            self.try_parse_funcall()
+            if self.peek(0)? == Token::Keyword(Keyword::If) {
+                self.consume(1);
+                self.try_parse_if().map(|x|{Node::If(x)})
+            } else {
+                self.try_parse_funcall().map(|x|{Node::Funcall(x)})
+            }
         } else {None};
-        let pipe = pipe_funcall.map(|funcall: Funcall| {
-            Box::from(funcall)
+        let pipe = pipe_funcall.map(|x| {
+            Box::from(x)
         });
         Some(Funcall{
             this_func_type: self.this_function.clone(),
@@ -148,6 +165,10 @@ impl Parser {
                 self.try_parse_define()
                     .map(|define: Define|{Node::Define(define)})
             },
+            Keyword::If => {
+                self.try_parse_if()
+                    .map(|if_stmt: If|{Node::If(if_stmt)})
+            },
         }
     }
 
@@ -160,7 +181,10 @@ impl Parser {
             return None;
         }
         self.consume(1);
+
         let types = self.try_parse_data_type()?;
+        self.functions.insert(name.clone(), types.clone().into());
+
         if self.peek(0)? != Token::SpecialArrow {
             return None;
         }
@@ -177,11 +201,45 @@ impl Parser {
             };
             stmts.push(stmt);
         }
-        self.functions.insert(name.clone(), types.clone().try_into().unwrap());
         Some(Define{
             func_name: name,
-            func_type: types.try_into().unwrap(),
+            func_type: types.into(),
             body: stmts,
+        })
+    }
+
+    fn try_parse_if(&mut self) -> Option<If> {
+        if self.peek(0)? != Token::SpecialArrow {
+            return None;
+        }
+        self.consume(1);
+        
+        let then_case = self.try_parse_stmt()?;
+
+        if self.peek(0)? == Token::EndArrow {
+            self.consume(1);
+            return Some(If {
+                then_case: Box::from(then_case),
+                else_case: None
+            });
+        }
+
+        if self.peek(0)? != Token::SpecialArrow {
+            return None;
+        }
+
+        self.consume(1);
+
+        let else_case = self.try_parse_stmt()?;
+
+        if self.peek(0)? != Token::EndArrow {
+            return None;
+        }
+        self.consume(1);
+
+        Some(If {
+            then_case: Box::from(then_case),
+            else_case: Some(Box::from(else_case))
         })
     }
 
@@ -202,7 +260,7 @@ impl Parser {
         self.consume(1);
         if let Some(types) = self.try_parse_data_type() {
             return Some({
-                let mut types_dequeue: VecDeque<_> = types.try_into().unwrap();
+                let mut types_dequeue: VecDeque<_> = types.into();
                 types_dequeue.push_front(data_type);
                 types_dequeue.into()
             });

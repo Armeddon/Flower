@@ -12,4 +12,10 @@ extern Variable *flwr_println(Variable **args, VarList *lst);
 
 extern Variable *flwr_add(Variable **args, VarList *lst);
 
-extern Variable *flwr_eq(Variable **args, VarList *lst);
+extern Variable *flwr_lt(Variable **args, VarList *lst);
+
+extern Variable *flwr_and(Variable **args, VarList *lst);
+
+extern Variable *flwr_not(Variable **args, VarList *lst);
+
+extern Variable *flwr_if(Variable **args, VarList *lst);

@@ -1,4 +1,5 @@
 #pragma once
+#include <stdbool.h>
 
 enum Type {
     Undefined,
@@ -43,3 +44,5 @@ extern void var_free(Variable *var);
 extern int var_len(Variable **args);
 
 extern int var_null(Variable *var);
+
+extern _Bool var_get_bool(Variable *var);

@@ -1,7 +1,5 @@
 use std::{
-    fs,
-    env,
-    io,
+    env, fs, io::{self, Read}
 };
 
 pub mod stdlib {
@@ -13,6 +11,7 @@ mod node;
 mod lexer;
 mod parser;
 mod generator;
+mod static_check;
 
 use lexer::tokenize;
 use parser::parse;
@@ -67,8 +66,10 @@ macro_rules! compile {
     };
 }
 
-pub fn translate(bytes: Vec<u8>) -> String {
-    let tokens = tokenize(bytes).expect("Error tokenizing!");
+pub fn translate(bytes: &mut Vec<u8>) -> String {
+    let mut bytes_with_std = Vec::from(stdlib::STD_FLWR);
+    bytes_with_std.extend(bytes.clone().into_iter());
+    let tokens = tokenize(bytes_with_std).expect("Error tokenizing!");
     let nodes = parse(tokens).expect("Error parsing!");
     generate(nodes)
 }

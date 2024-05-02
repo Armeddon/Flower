@@ -11,12 +11,12 @@ use flower::{
 mod test;
 
 fn main() {
-    let bytes = read_src();
-    let code = translate(bytes);
+    let mut bytes = read_src();
+    let code = translate(&mut bytes);
     write_c_code(code).expect("Error writing c code!");
     load_stdlib().expect("Error loading stdlib!");
     let status = compile!();
-    remove_c().expect("Error removing c code!");
+    //remove_c().expect("Error removing c code!");
     if let Err(e) = status {
         panic!("Error compiling! {e}");
     }

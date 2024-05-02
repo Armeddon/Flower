@@ -1,6 +1,7 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Keyword {
     Define,
+    If,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -10,7 +11,7 @@ pub enum DataType {
     Unit,
     String,
     Bool,
-    Template(String)
+    Template(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -55,11 +56,13 @@ impl Keyword {
     fn keywords() -> Vec<Self> {
         vec![
             Keyword::Define,
+            Keyword::If,
         ]
     }
     pub fn src_repr(&self) -> String {
         match self {
-            Keyword::Define => "define"
+            Keyword::Define => "define",
+            Keyword::If => "if",
         }.to_string()
     }
 }
@@ -70,6 +73,7 @@ impl DataType {
             DataType::Int,
             DataType::Unit,
             DataType::String,
+            DataType::Bool,
         ]
     }
 }
@@ -125,6 +129,24 @@ impl DataType {
             DataType::Bool => "Bool",
             _ => ""
         }.to_string()
+    }
+
+    fn predecessors(&self) -> Vec<DataType> {
+        match self {
+            _ => vec![]
+        }
+    }
+
+    pub fn inherits(&self, other: &Self) -> bool {
+       if other.predecessors().contains(self) {
+            return true;
+       }
+
+       if let DataType::Template(_) = other {
+            return true;
+       }
+
+       false
     }
 }
 

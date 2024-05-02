@@ -29,6 +29,7 @@ Variable *flwr_readString(Variable **args, VarList *lst) {
     var_take_pextend(&lst, args, min(var_len(args), 1));
     Variable *_arg0 = var_get(lst, 0);
     if (var_get_type(_arg0) != Int) {
+        var_take_delete(&lst, min(var_len(args), 1));
         return NULL;
     }
     int limit = *(int*)_arg0->value;
@@ -73,11 +74,11 @@ Variable *flwr_add(Variable **args, VarList *lst) {
     Variable *_arg0 = var_get(lst, 0);
     Variable *_arg1 = var_get(lst, 1);
     if (var_get_type(_arg0) != Int) {
-        var_delete(lst);
+        var_take_delete(&lst, min(var_len(args), 2));
         return NULL;
     }
     if (var_get_type(_arg1) != Int) {
-        var_delete(lst);
+        var_take_delete(&lst, min(var_len(args), 2));
         return NULL;
     }
     Variable *sum = malloc(sizeof(Variable));
@@ -88,32 +89,90 @@ Variable *flwr_add(Variable **args, VarList *lst) {
     return sum;
 }
 
-Variable *flwr_eq(Variable **args, VarList *lst) {
+Variable *flwr_lt(Variable **args, VarList *lst) {
     var_take_pextend(&lst, args, min(var_len(args), 2));
     Variable *_arg0 = var_get(lst, 0);
     Variable *_arg1 = var_get(lst, 1);
     if (var_get_type(_arg0) != var_get_type(_arg1)) {
-        var_delete(lst);
+        var_take_delete(&lst, min(var_len(args), 2));
         return NULL;
     }
-    Variable *eq = malloc(sizeof(Variable));
-    eq->type = Bool;
-    eq->value = malloc(sizeof(_Bool));
+    Variable *cmp = malloc(sizeof(Variable));
+    cmp->type = Bool;
+    cmp->value = malloc(sizeof(_Bool));
     switch (var_get_type(_arg0)) {
         case Int:
-            *(_Bool*)eq->value = *(int*)_arg0->value == *(int*)_arg1->value;
+            *(_Bool*)cmp->value = *(int*)_arg0->value < *(int*)_arg1->value;
             break;
         case String:
-            *(_Bool*)eq->value = string_eq((string*)_arg0->value, (string*)_arg1->value);
+            *(_Bool*)cmp->value = string_lt((string*)_arg0->value, (string*)_arg1->value);
             break;
         case Bool:
-            *(_Bool*)eq->value = (char)*(_Bool*)_arg0->value == (char)*(_Bool*)_arg1->value;
+            *(_Bool*)cmp->value = (char)*(_Bool*)_arg0->value < (char)*(_Bool*)_arg1->value;
             break;
         case Undefined:
         case Unit:
         default:
-            *(_Bool*)eq->value = 1;
+            *(_Bool*)cmp->value = 0;
     }
     var_take_delete(&lst, min(var_len(args), 2));
-    return eq;
+    return cmp;
+}
+
+Variable *flwr_not(Variable **args, VarList *lst) {
+    var_take_pextend(&lst, args, min(var_len(args), 1));
+    Variable *_arg0 = var_get(lst, 0);
+    if (var_get_type(_arg0) != Bool) {
+        var_take_delete(&lst, min(var_len(args), 1));
+        return NULL;
+    }
+    Variable *res = malloc(sizeof(Variable));
+    res->type = Bool;
+    res->value = malloc(sizeof(_Bool));
+    *(_Bool*)res->value = !*(_Bool*)_arg0->value;
+    var_take_delete(&lst, min(var_len(args), 1));
+    return res;
+}
+
+Variable *flwr_and(Variable **args, VarList *lst) {
+    var_take_pextend(&lst, args, min(var_len(args), 2));
+    Variable *_arg0 = var_get(lst, 0);
+    Variable *_arg1 = var_get(lst, 1);
+    if (var_get_type(_arg0) != Bool) {
+        var_take_delete(&lst, min(var_len(args), 2));
+        return NULL;
+    }
+    if (var_get_type(_arg1) != Bool) {
+        var_take_delete(&lst, min(var_len(args), 2));
+        return NULL;
+    }
+    Variable *res = malloc(sizeof(Variable));
+    res->type = Bool;
+    res->value = malloc(sizeof(_Bool));
+    *(_Bool*)res->value = *(_Bool*)_arg0->value && *(_Bool*)_arg1->value;
+    var_take_delete(&lst, min(var_len(args), 2));
+    return res;
+}
+
+Variable *flwr_if(Variable **args, VarList *lst) {
+    var_take_pextend(&lst, args, min(var_len(args), 3));
+    Variable *_arg0 = var_get(lst, 0);
+    Variable *_arg1 = var_get(lst, 1);
+    Variable *_arg2 = var_get(lst, 2);
+    if (var_get_type(_arg0) != Bool) {
+        var_take_delete(&lst, min(var_len(args), 3));
+        return NULL;
+    }
+    if (var_get_type(_arg1) != var_get_type(_arg2)) {
+        var_take_delete(&lst, min(var_len(args), 3));
+        return NULL;
+    }
+    Variable *res = NULL;
+    if (*(_Bool*)_arg0->value) {
+        res = var_cpy(_arg1);
+    } else {
+        res = var_cpy(_arg2);
+    }
+    var_take_delete(&lst, min(var_len(args), 3));
+    return res;
 }

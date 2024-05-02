@@ -24,7 +24,7 @@ struct Lexer {
 impl Lexer {
     fn new(source: Vec<u8>) -> Self {
         Self { 
-            source: source.try_into().unwrap(),
+            source: source.into(),
         }
     }
 
@@ -143,6 +143,10 @@ impl Lexer {
     fn tokenize_int_literal(&mut self) -> Option<Literal> {
         let mut number = 0;
         let mut i = 0;
+        let neg = self.peek(0)? == '-' as u8;
+        if neg {
+            i += 1;
+        }
 
         if let Some(byte) = self.peek(i) {
             if !byte.is_ascii_digit() {
@@ -159,7 +163,7 @@ impl Lexer {
         }
         self.consume(i);
 
-        Some(Literal::IntLiteral(number))
+        Some(Literal::IntLiteral(number * if neg {-1} else {1}))
     }
 
     fn tokenize_string_literal(&mut self) -> Option<Literal> {

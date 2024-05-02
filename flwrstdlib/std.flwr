@@ -1,0 +1,43 @@
+define ge :>
+T -> T -> Bool :>
+    lt => not
+;>
+
+define eq :>
+T -> T -> Bool :>
+    id |>
+    id =>
+    id |>
+    ge =>
+    ge =>
+    and
+;>
+
+define neq :>
+T -> T -> Bool :>
+    eq => not
+;>
+
+define or :>
+Bool -> Bool -> Bool :>
+    not =>
+    not =>
+    and =>
+    not
+;>
+
+define gt :>
+T -> T -> Bool :>
+    ge |>
+    eq =>
+    id =>
+    not =>
+    and
+;>
+
+define le :>
+T -> T -> Bool :>
+    lt |>
+    eq =>
+    or
+;>

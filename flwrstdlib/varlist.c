@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include "varlist.h"
@@ -158,11 +159,21 @@ int var_len(Variable **args) {
 }
 
 void var_take_pextend(VarList **lst, Variable **args, int n) {
-    for (int i = 0; i < n; i++) {
+    for (int i = n-1; i >= 0; i--) {
         var_prepend(lst, args[i]);
     }
 }
 
 int var_null(Variable *var) {
     return !var || !var->value;
+}
+
+_Bool var_get_bool(Variable *var) {
+    switch (var_get_type(var)) {
+        case Bool:
+            return *(_Bool*)var->value;
+        default:
+            break;
+    }
+    return false;
 }

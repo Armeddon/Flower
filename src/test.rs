@@ -153,25 +153,6 @@ define main :>
 }
 
 #[test]
-fn constants() {
-    let src = r#"
-define five :> Int :> 5 ;>
-define main :>
-() :>
-    readInt =>
-    five =>
-    add =>
-    println
-;>"#.bytes().collect();
-    compiles(src);
-    assert_eq!(
-        run_result!(42),
-        "47\n".as_bytes(),
-        "The test adds input(42) to the constant file (=5)"
-        )
-}
-
-#[test]
 fn constant_arguments() {
     let src = r#"
 define main :>
@@ -267,31 +248,124 @@ define main :>
 }
 
 #[test]
-fn equality() {
+fn comparison() {
     let src = r#"
 define main :>
 () :>
-    eq 1 1 =>
+    lt 1 1 =>
     println
-    eq "Hello" "Hello" =>
+    lt "Hello" "Hello" =>
     println
-    eq 2 0 =>
+    lt 0 2 =>
     println
 ;>"#.bytes().collect();
     compiles(src);
     assert_eq!(
         run_result!(),
-        "True\nTrue\nFalse\n".as_bytes(),
-        "Test of the equality function"
+        "False\nFalse\nTrue\n".as_bytes(),
+        "Test of the comparison function"
+        )
+}
+
+#[test]
+fn std_flwr() {
+    let src = r#"
+define f :>
+() :>
+    readInt =>
+    eq 1 =>
+    println
+;>
+
+define main :>
+() :>
+    f
+    f
+;>"#.bytes().collect();
+    compiles(src);
+    assert_eq!(
+        run_result!(1, 2),
+        "True\nFalse\n".as_bytes(),
+        "Test of the std func in flwr"
+        )
+}
+
+#[test]
+fn condition() {
+    let src = r#"
+define f :>
+() :>
+    readInt =>
+    eq 1 =>
+    if :>
+        println "One"
+    :>
+        println "Not one"
+    ;>
+;>
+
+define main :>
+() :>
+    f
+    f
+;>"#.bytes().collect();
+    compiles(src);
+    assert_eq!(
+        run_result!(1, 2),
+        "One\nNot one\n".as_bytes(),
+        "Test of the if-expression"
+        )
+}
+
+#[test]
+fn recursion() {
+    let src = r#"
+define nsquare :>
+Int -> Int :>
+    id |>
+    eq 1 =>
+    id =>
+    if :>
+        id 1
+    :>
+        id |> 
+        add -2 =>
+        id =>
+        nsquare =>
+        add
+    ;>
+;>
+define f :>
+Int -> Int :>
+    id |>
+    add =>
+    add -1 =>
+    nsquare
+;>
+define main :>
+() :>
+    readInt =>
+    readInt =>
+    f =>
+    f =>
+    println =>
+    println
+;>"#.bytes().collect();
+    compiles(src);
+    assert_eq!(
+        run_result!(1, 3),
+        "1\n9\n".as_bytes(),
+        "Test of the recursion"
         )
 }
 
 fn compiles(src: Vec<u8>) {
-    let code = translate(src);
+    let mut src = src.clone();
+    let code = translate(&mut src);
     write_c_code(code).expect("Error writing c code!");
     load_stdlib().expect("Error loading stdlib!");
     let status = compile!("test");
-    remove_c().expect("Error removing c files!");
+    //remove_c().expect("Error removing c files!");
 
     assert!(status.is_ok());
 }

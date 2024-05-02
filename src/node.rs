@@ -19,7 +19,7 @@ pub struct Funcall {
     pub func_name: String,
     pub func_type: Vec<DataType>,
     pub in_place_params: Vec<Literal>,
-    pub pipe: Option<Box<Funcall>>,
+    pub pipe: Option<Box<Node>>,
     pub pipe_type: Option<Pipe>,
     pub this_func_type: Vec<DataType>,
 }
@@ -30,9 +30,22 @@ pub enum Expr {
 }
 
 #[derive(Debug, Clone)]
+pub struct Return {
+    pub expr: Box<Expr>,
+    pub return_type: Option<DataType>,
+}
+
+#[derive(Debug, Clone)]
+pub struct If {
+    pub then_case: Box<Node>,
+    pub else_case: Option<Box<Node>>,
+}
+
+#[derive(Debug, Clone)]
 pub enum Node {
     Define(Define),
-    Return(Box<Expr>),
+    If(If),
+    Return(Return),
     Funcall(Funcall),
 }
 

@@ -12,7 +12,13 @@ extern Variable *flwr_println(Variable **args, VarList *lst);
 
 extern Variable *flwr_add(Variable **args, VarList *lst);
 
-extern Variable *flwr_eq(Variable **args, VarList *lst);
+extern Variable *flwr_lt(Variable **args, VarList *lst);
+
+extern Variable *flwr_and(Variable **args, VarList *lst);
+
+extern Variable *flwr_not(Variable **args, VarList *lst);
+
+extern Variable *flwr_if(Variable **args, VarList *lst);
 "#.as_bytes();
 pub const STDLIB_C: &[u8] = r#"#include <stddef.h>
 #include <stdio.h>
@@ -45,6 +51,7 @@ Variable *flwr_readString(Variable **args, VarList *lst) {
     var_take_pextend(&lst, args, min(var_len(args), 1));
     Variable *_arg0 = var_get(lst, 0);
     if (var_get_type(_arg0) != Int) {
+        var_take_delete(&lst, min(var_len(args), 1));
         return NULL;
     }
     int limit = *(int*)_arg0->value;
@@ -89,11 +96,11 @@ Variable *flwr_add(Variable **args, VarList *lst) {
     Variable *_arg0 = var_get(lst, 0);
     Variable *_arg1 = var_get(lst, 1);
     if (var_get_type(_arg0) != Int) {
-        var_delete(lst);
+        var_take_delete(&lst, min(var_len(args), 2));
         return NULL;
     }
     if (var_get_type(_arg1) != Int) {
-        var_delete(lst);
+        var_take_delete(&lst, min(var_len(args), 2));
         return NULL;
     }
     Variable *sum = malloc(sizeof(Variable));
@@ -104,37 +111,96 @@ Variable *flwr_add(Variable **args, VarList *lst) {
     return sum;
 }
 
-Variable *flwr_eq(Variable **args, VarList *lst) {
+Variable *flwr_lt(Variable **args, VarList *lst) {
     var_take_pextend(&lst, args, min(var_len(args), 2));
     Variable *_arg0 = var_get(lst, 0);
     Variable *_arg1 = var_get(lst, 1);
     if (var_get_type(_arg0) != var_get_type(_arg1)) {
-        var_delete(lst);
+        var_take_delete(&lst, min(var_len(args), 2));
         return NULL;
     }
-    Variable *eq = malloc(sizeof(Variable));
-    eq->type = Bool;
-    eq->value = malloc(sizeof(_Bool));
+    Variable *cmp = malloc(sizeof(Variable));
+    cmp->type = Bool;
+    cmp->value = malloc(sizeof(_Bool));
     switch (var_get_type(_arg0)) {
         case Int:
-            *(_Bool*)eq->value = *(int*)_arg0->value == *(int*)_arg1->value;
+            *(_Bool*)cmp->value = *(int*)_arg0->value < *(int*)_arg1->value;
             break;
         case String:
-            *(_Bool*)eq->value = string_eq((string*)_arg0->value, (string*)_arg1->value);
+            *(_Bool*)cmp->value = string_lt((string*)_arg0->value, (string*)_arg1->value);
             break;
         case Bool:
-            *(_Bool*)eq->value = (char)*(_Bool*)_arg0->value == (char)*(_Bool*)_arg1->value;
+            *(_Bool*)cmp->value = (char)*(_Bool*)_arg0->value < (char)*(_Bool*)_arg1->value;
             break;
         case Undefined:
         case Unit:
         default:
-            *(_Bool*)eq->value = 1;
+            *(_Bool*)cmp->value = 0;
     }
     var_take_delete(&lst, min(var_len(args), 2));
-    return eq;
+    return cmp;
+}
+
+Variable *flwr_not(Variable **args, VarList *lst) {
+    var_take_pextend(&lst, args, min(var_len(args), 1));
+    Variable *_arg0 = var_get(lst, 0);
+    if (var_get_type(_arg0) != Bool) {
+        var_take_delete(&lst, min(var_len(args), 1));
+        return NULL;
+    }
+    Variable *res = malloc(sizeof(Variable));
+    res->type = Bool;
+    res->value = malloc(sizeof(_Bool));
+    *(_Bool*)res->value = !*(_Bool*)_arg0->value;
+    var_take_delete(&lst, min(var_len(args), 1));
+    return res;
+}
+
+Variable *flwr_and(Variable **args, VarList *lst) {
+    var_take_pextend(&lst, args, min(var_len(args), 2));
+    Variable *_arg0 = var_get(lst, 0);
+    Variable *_arg1 = var_get(lst, 1);
+    if (var_get_type(_arg0) != Bool) {
+        var_take_delete(&lst, min(var_len(args), 2));
+        return NULL;
+    }
+    if (var_get_type(_arg1) != Bool) {
+        var_take_delete(&lst, min(var_len(args), 2));
+        return NULL;
+    }
+    Variable *res = malloc(sizeof(Variable));
+    res->type = Bool;
+    res->value = malloc(sizeof(_Bool));
+    *(_Bool*)res->value = *(_Bool*)_arg0->value && *(_Bool*)_arg1->value;
+    var_take_delete(&lst, min(var_len(args), 2));
+    return res;
+}
+
+Variable *flwr_if(Variable **args, VarList *lst) {
+    var_take_pextend(&lst, args, min(var_len(args), 3));
+    Variable *_arg0 = var_get(lst, 0);
+    Variable *_arg1 = var_get(lst, 1);
+    Variable *_arg2 = var_get(lst, 2);
+    if (var_get_type(_arg0) != Bool) {
+        var_take_delete(&lst, min(var_len(args), 3));
+        return NULL;
+    }
+    if (var_get_type(_arg1) != var_get_type(_arg2)) {
+        var_take_delete(&lst, min(var_len(args), 3));
+        return NULL;
+    }
+    Variable *res = NULL;
+    if (*(_Bool*)_arg0->value) {
+        res = var_cpy(_arg1);
+    } else {
+        res = var_cpy(_arg2);
+    }
+    var_take_delete(&lst, min(var_len(args), 3));
+    return res;
 }
 "#.as_bytes();
 pub const VARLIST_H: &[u8] = r#"#pragma once
+#include <stdbool.h>
 
 enum Type {
     Undefined,
@@ -179,8 +245,11 @@ extern void var_free(Variable *var);
 extern int var_len(Variable **args);
 
 extern int var_null(Variable *var);
+
+extern _Bool var_get_bool(Variable *var);
 "#.as_bytes();
-pub const VARLIST_C: &[u8] = r#"#include <stdlib.h>
+pub const VARLIST_C: &[u8] = r#"#include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include "varlist.h"
 #include "string.c"
@@ -340,13 +409,23 @@ int var_len(Variable **args) {
 }
 
 void var_take_pextend(VarList **lst, Variable **args, int n) {
-    for (int i = 0; i < n; i++) {
+    for (int i = n-1; i >= 0; i--) {
         var_prepend(lst, args[i]);
     }
 }
 
 int var_null(Variable *var) {
     return !var || !var->value;
+}
+
+_Bool var_get_bool(Variable *var) {
+    switch (var_get_type(var)) {
+        case Bool:
+            return *(_Bool*)var->value;
+        default:
+            break;
+    }
+    return false;
 }
 "#.as_bytes();
 pub const STRING_H: &[u8] = r#"#include "stdbool.h"
@@ -359,7 +438,7 @@ extern string *string_new(int len, char *str);
 
 extern void string_delete(string *str);
 
-extern _Bool string_eq(string *s1, string *s2);
+extern _Bool string_lt(string *s1, string *s2);
 "#.as_bytes();
 pub const STRING_C: &[u8] = r#"#include <stdlib.h>
 #include <string.h>
@@ -381,16 +460,62 @@ void string_delete(string *str) {
     free(str);
 }
 
-_Bool string_eq(string *s1, string *s2) {
+_Bool string_lt(string *s1, string *s2) {
     if (!s1 && !s2)
-        return 1;
-    if (!s1 || !s2)
         return 0;
-    if (s1->len != s2->len)
+    if (!s1)
+        return 1;
+    if (!s2)
+        return 0;
+    if (s1->len > s2->len)
         return 0;
     for (int i = 0; i < s1->len; i++)
-        if (s1->str[i] != s2->str[i])
+        if (s1->str[i] >= s2->str[i])
             return 0;
     return 1;
 }
+"#.as_bytes();
+pub const STD_FLWR: &[u8] = r#"define ge :>
+T -> T -> Bool :>
+    lt => not
+;>
+
+define eq :>
+T -> T -> Bool :>
+    id |>
+    id =>
+    id |>
+    ge =>
+    ge =>
+    and
+;>
+
+define neq :>
+T -> T -> Bool :>
+    eq => not
+;>
+
+define or :>
+Bool -> Bool -> Bool :>
+    not =>
+    not =>
+    and =>
+    not
+;>
+
+define gt :>
+T -> T -> Bool :>
+    ge |>
+    eq =>
+    id =>
+    not =>
+    and
+;>
+
+define le :>
+T -> T -> Bool :>
+    lt |>
+    eq =>
+    or
+;>
 "#.as_bytes();
